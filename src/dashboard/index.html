@@ -1879,14 +1879,16 @@
 
       <div class="presets-row">
         <span style="font-size:11.5px; color:var(--muted); font-family:var(--font-mono);">Presets:</span>
-        <button type="button" class="preset-chip" onclick="applyPreset('fastify')">fastify/rate-limiter #88</button>
+        <button type="button" class="preset-chip" onclick="applyPreset('nullHandling')">⚡ Seed: Null Handling</button>
+        <button type="button" class="preset-chip" onclick="applyPreset('offByOne')">⚡ Seed: Off-by-one</button>
+        <button type="button" class="preset-chip" onclick="applyPreset('asyncRace')">⚡ Seed: Async Race</button>
+        <button type="button" class="preset-chip" onclick="applyPreset('fastify')">fastify/fastify-rate-limit #88</button>
         <button type="button" class="preset-chip" onclick="applyPreset('express')">express-validator #142</button>
-        <button type="button" class="preset-chip" onclick="applyPreset('redis')">ioredis/cluster #209</button>
       </div>
 
       <div class="form-group">
-        <label>GitHub Repository URL</label>
-        <input type="url" class="form-input" id="inputRepoUrl" placeholder="https://github.com/fastify/rate-limiter" />
+        <label>GitHub Repository URL (or demo:seed-name)</label>
+        <input type="text" class="form-input" id="inputRepoUrl" placeholder="demo:null-handling or https://github.com/..." />
       </div>
 
       <div class="form-group">
@@ -1924,8 +1926,26 @@
     let fullTestSha = '8f3c7e8ad104b2c1f9e8a7d6b5c4e3f2a17094b8e2d';
 
     const PRESETS = {
+      nullHandling: {
+        repoUrl: 'demo:null-handling',
+        issueNumber: 142,
+        issueTitle: 'TypeError: Cannot read properties of null in formatUserList',
+        issueBody: 'formatUserList throws an unhandled TypeError when users array contains null items instead of defaulting to Anonymous.'
+      },
+      offByOne: {
+        repoUrl: 'demo:off-by-one',
+        issueNumber: 88,
+        issueTitle: 'Off-by-one in sliding window boundary timestamp check',
+        issueBody: 'Requests landing on the exact millisecond of the window boundary are rejected prematurely because the window comparison uses <= instead of <.'
+      },
+      asyncRace: {
+        repoUrl: 'demo:async-race',
+        issueNumber: 54,
+        issueTitle: 'Async sanitizer chain uncaught race condition on empty payload',
+        issueBody: 'When an empty payload is submitted, race condition triggers buffer slicing failure.'
+      },
       fastify: {
-        repoUrl: 'https://github.com/fastify/rate-limiter',
+        repoUrl: 'https://github.com/fastify/fastify-rate-limit',
         issueNumber: 88,
         issueTitle: 'Off-by-one in sliding window boundary timestamp check',
         issueBody: 'Requests landing on the exact millisecond of the window boundary are rejected prematurely because the window comparison uses <= instead of <.'
@@ -1935,12 +1955,6 @@
         issueNumber: 142,
         issueTitle: 'Async sanitizer chain uncaught race condition on empty payload',
         issueBody: 'When an empty string is passed into the async sanitizer pipeline, a TypeError occurs during buffer slicing instead of returning clean valid output.'
-      },
-      redis: {
-        repoUrl: 'https://github.com/redis/ioredis',
-        issueNumber: 209,
-        issueTitle: 'Unhandled socket close event during cluster slot resharding',
-        issueBody: 'Cluster pool fails to clean up socket error listeners prior to socket destroy upon receiving MOVED redirection.'
       }
     };
 
