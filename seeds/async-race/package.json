@@ -1,0 +1,12 @@
+{
+  "name": "demo-async-race",
+  "version": "1.0.0",
+  "description": "Demo repo with a planted async race condition bug",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0"
+  }
+}

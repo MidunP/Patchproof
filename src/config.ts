@@ -3,15 +3,21 @@ import { z } from 'zod';
 
 loadDotenv();
 
+const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+
 const envSchema = z.object({
   PORT: z.string().default('3000').transform(Number),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default(isTest ? 'test' : 'development'),
 
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  DATABASE_URL: isTest
+    ? z.string().default('postgresql://postgres:postgres@localhost:5432/repro_test')
+    : z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
   LLM_BASE_URL: z.string().default('https://api.openai.com/v1'),
-  LLM_API_KEY: z.string().min(1, 'LLM_API_KEY is required'),
+  LLM_API_KEY: isTest
+    ? z.string().default('test-llm-api-key')
+    : z.string().min(1, 'LLM_API_KEY is required'),
   LLM_MODEL: z.string().default('gpt-4o'),
 
   GITHUB_TOKEN: z.string().default(''),

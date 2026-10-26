@@ -1,0 +1,12 @@
+{
+  "name": "demo-null-handling",
+  "version": "1.0.0",
+  "description": "Demo repo with a null handling bug",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0"
+  }
+}

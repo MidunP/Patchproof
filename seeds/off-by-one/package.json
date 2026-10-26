@@ -1,0 +1,12 @@
+{
+  "name": "demo-off-by-one",
+  "version": "1.0.0",
+  "description": "Demo repo with a planted off-by-one bug",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0"
+  }
+}
