@@ -22,10 +22,13 @@ export interface StatusEvent {
   ts: string;
 }
 
+import { sanitizeMessage } from '../db/runs.js';
+
 /** Emit a log line to all SSE clients watching a run */
 export function emitLog(event: LogEvent): void {
-  sseEmitter.emit(`run:${event.runId}:log`, event);
-  sseEmitter.emit('all:log', event); // dashboard "all runs" view
+  const sanitized = { ...event, message: sanitizeMessage(event.message) };
+  sseEmitter.emit(`run:${event.runId}:log`, sanitized);
+  sseEmitter.emit('all:log', sanitized); // dashboard "all runs" view
 }
 
 /** Emit a status change to all SSE clients watching a run */

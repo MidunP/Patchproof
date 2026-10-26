@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
 import {
   safePath,
+  isWritePathAllowed,
   detectRunner,
   buildTestCmd,
   parseTestCounts,
 } from '../src/sandbox/tools';
+import { sanitizeMessage } from '../src/db/runs';
 
 describe('safePath (Path Traversal Protection)', () => {
   it('allows safe relative paths inside workspace', () => {
@@ -114,5 +115,50 @@ describe('parseTestCounts', () => {
     expect(counts.passed).toBe(8);
     expect(counts.failed).toBe(2);
     expect(counts.total).toBe(10);
+  });
+});
+
+describe('isWritePathAllowed (System File Protection)', () => {
+  it('allows writes to standard project files', () => {
+    expect(isWritePathAllowed('/workspace/src/math.ts')).toBe(true);
+    expect(isWritePathAllowed('/workspace/tests/repro.test.ts')).toBe(true);
+    expect(isWritePathAllowed('/workspace/package.json')).toBe(true);
+  });
+
+  it('blocks writes to .git directory and hooks', () => {
+    expect(isWritePathAllowed('/workspace/.git/config')).toBe(false);
+    expect(isWritePathAllowed('/workspace/.git/hooks/pre-commit')).toBe(false);
+  });
+
+  it('blocks writes to .github workflows', () => {
+    expect(isWritePathAllowed('/workspace/.github/workflows/ci.yml')).toBe(false);
+  });
+
+  it('blocks writes to .env files', () => {
+    expect(isWritePathAllowed('/workspace/.env')).toBe(false);
+    expect(isWritePathAllowed('/workspace/.env.local')).toBe(false);
+    expect(isWritePathAllowed('/workspace/.env.production')).toBe(false);
+  });
+});
+
+describe('sanitizeMessage (Telemetry Secret Scrubbing)', () => {
+  it('scrubs GitHub Personal Access Tokens', () => {
+    const raw = 'Pushing to remote with token ghp_1234567890abcdef1234567890';
+    expect(sanitizeMessage(raw)).toBe('Pushing to remote with token ghp_***');
+  });
+
+  it('scrubs OpenAI API keys', () => {
+    const raw = 'LLM authentication failed: sk-abcdef1234567890abcdef1234567890';
+    expect(sanitizeMessage(raw)).toBe('LLM authentication failed: sk-***');
+  });
+
+  it('scrubs database passwords from connection strings', () => {
+    const raw = 'Connected to postgresql://repro_user:SuperSecretPassword123@localhost:5432/repro';
+    expect(sanitizeMessage(raw)).toBe('Connected to postgresql://repro_user:***@localhost:5432/repro');
+  });
+
+  it('scrubs Bearer tokens', () => {
+    const raw = 'Authorization header: Bearer abcdef1234567890abcdef123456';
+    expect(sanitizeMessage(raw)).toBe('Authorization header: Bearer ***');
   });
 });

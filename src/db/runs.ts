@@ -97,6 +97,18 @@ export async function listRuns(limit = 20): Promise<Run[]> {
   return rows;
 }
 
+/** Sanitize secrets (tokens, API keys, credentials) before persisting or streaming */
+export function sanitizeMessage(msg: string): string {
+  if (!msg) return msg;
+  return msg
+    .replace(/ghp_[a-zA-Z0-9]{20,}/g, 'ghp_***')
+    .replace(/gho_[a-zA-Z0-9]{20,}/g, 'gho_***')
+    .replace(/github_pat_[a-zA-Z0-9_]{20,}/g, 'github_pat_***')
+    .replace(/sk-[a-zA-Z0-9_-]{20,}/g, 'sk-***')
+    .replace(/Bearer\s+[a-zA-Z0-9._-]{20,}/gi, 'Bearer ***')
+    .replace(/postgres(?:ql)?:\/\/([^:]+):([^@]+)@/gi, 'postgresql://$1:***@');
+}
+
 /** Append a log line to the logs table */
 export async function appendLog(
   runId: string,
@@ -104,9 +116,10 @@ export async function appendLog(
   level: 'info' | 'warn' | 'error' | 'debug' = 'info',
   source: 'agent' | 'sandbox' | 'system' = 'system',
 ): Promise<void> {
+  const sanitized = sanitizeMessage(message);
   await query(
     `INSERT INTO logs (run_id, level, source, message) VALUES ($1, $2, $3, $4)`,
-    [runId, level, source, message],
+    [runId, level, source, sanitized],
   );
 }
 

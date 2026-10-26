@@ -88,6 +88,16 @@ export async function searchCode(
   }
 }
 
+const PROTECTED_WRITE_PATHS = [
+  /^\/workspace\/\.git(\/|$)/i,
+  /^\/workspace\/\.github(\/|$)/i,
+  /^\/workspace\/\.env(\..+)?$/i,
+];
+
+export function isWritePathAllowed(resolvedPath: string): boolean {
+  return !PROTECTED_WRITE_PATHS.some((pattern) => pattern.test(resolvedPath));
+}
+
 // ── write_file ────────────────────────────────────────────────────────────────
 export async function writeFile(
   sandbox: SandboxContainer,
@@ -96,6 +106,9 @@ export async function writeFile(
 ): Promise<ToolResult> {
   try {
     const safe = safePath(filePath);
+    if (!isWritePathAllowed(safe)) {
+      return { ok: false, output: '', error: `Write to protected system path blocked: ${filePath}` };
+    }
 
     // Ensure parent directory exists
     const dir = path.posix.dirname(safe);
@@ -145,6 +158,10 @@ export async function runTests(
 
   const result = await execInSandbox(sandbox, ['sh', '-c', cmd], { timeoutMs });
   const combined = result.stdout + result.stderr;
+  const MAX_OUTPUT_CHARS = 50_000;
+  const truncatedOutput = combined.length > MAX_OUTPUT_CHARS
+    ? combined.slice(0, MAX_OUTPUT_CHARS) + `\n\n[Repro Output Truncated: ${combined.length - MAX_OUTPUT_CHARS} characters omitted]`
+    : combined;
 
   const counts = parseTestCounts(combined, runner);
 
@@ -153,7 +170,7 @@ export async function runTests(
     passed: counts.passed,
     failed: counts.failed,
     total: counts.total,
-    output: combined,
+    output: truncatedOutput,
     exitCode: result.exitCode,
   };
 }
