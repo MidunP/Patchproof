@@ -1,0 +1,53 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: repro
+      POSTGRES_PASSWORD: repro
+      POSTGRES_DB: repro
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U repro']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      - DATABASE_URL=postgresql://repro:repro@postgres:5432/repro
+      - REDIS_URL=redis://redis:6379
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - SANDBOX_IMAGE=node:20-alpine
+      - AGENT_MAX_ATTEMPTS=5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # needed for dockerode
+
+volumes:
+  pg_data:
