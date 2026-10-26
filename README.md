@@ -125,12 +125,13 @@ tests/
 ## Test Suite
 
 ```bash
-# Run the complete test suite (35 tests)
+# Run the complete test suite (49 tests)
 npm test
 ```
 
-- `tests/verification.test.ts` (7 tests): Core verification gate invariant tests (all 4 failure modes & happy path)
-- `tests/tools.test.ts` (17 tests): Path traversal prevention (`safePath`), runner detection (Vitest, Jest), command builder, output parser
+- `tests/verification.test.ts` (9 tests): Core verification gate invariant tests (tamper detection, assertion vs crash failure, regression check)
+- `tests/tools.test.ts` (25 tests): Path traversal prevention (`safePath`), protected paths (`isWritePathAllowed`), telemetry secret scrubbing (`sanitizeMessage`), runner detection, count parsing
+- `tests/routes.test.ts` (4 tests): HTTP routes (`/health`, `/api/trigger`, `/api/runs`) input validation and status codes
 - `tests/github.test.ts` (7 tests): Repo URL parsing, webhook HMAC-SHA256 signature verification, PR report builder
 - `tests/prompts.test.ts` (4 tests): System prompt rules, Phase 1 (reproduce) and Phase 2 (patch) prompt construction
 
