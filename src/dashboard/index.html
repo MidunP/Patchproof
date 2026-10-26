@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Repro — Bug Reproduction Agent</title>
+  <meta name="description" content="Live dashboard for Repro: automated bug reproduction and patching agent for GitHub issues." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #151820;
+      --surface2: #1c2030;
+      --border: #252a3a;
+      --accent: #6366f1;
+      --accent-dim: rgba(99,102,241,0.15);
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--surface);
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logo-badge {
+      font-size: 10px;
+      font-weight: 500;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin-left: 4px;
+      -webkit-text-fill-color: var(--accent);
+    }
+    .health-indicator {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .health-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: pulse 2s infinite;
+    }
+    .health-dot.ok { background: var(--green); }
+    .health-dot.err { background: var(--red); animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: calc(100vh - 57px);
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sidebar-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    .trigger-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .trigger-btn:hover { opacity: 0.85; }
+
+    .runs-list { overflow-y: auto; flex: 1; }
+    .run-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+      position: relative;
+    }
+    .run-item:hover { background: var(--surface2); }
+    .run-item.active { background: var(--accent-dim); border-left: 2px solid var(--accent); }
+    .run-item-repo { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .run-item-meta { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
+    .status-pill {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-queued    { background: rgba(100,116,139,0.2); color: var(--muted); }
+    .status-cloning   { background: rgba(59,130,246,0.15); color: var(--blue); }
+    .status-reproducing { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .status-patching  { background: rgba(245,158,11,0.2); color: var(--yellow); }
+    .status-verifying { background: rgba(99,102,241,0.2); color: var(--accent); }
+    .status-pr_opened { background: rgba(34,197,94,0.15); color: var(--green); }
+    .status-failed    { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    /* ── Main panel ── */
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .run-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .run-title { font-size: 16px; font-weight: 600; }
+    .run-subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+
+    /* ── Timeline ── */
+    .timeline {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 0;
+      align-items: center;
+    }
+    .timeline-step {
+      display: flex;
+      align-items: center;
+      flex: 1;
+    }
+    .step-node {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      flex-shrink: 0;
+      position: relative;
+      transition: all 0.3s;
+    }
+    .step-node.done { background: var(--green); border-color: var(--green); color: white; }
+    .step-node.active { background: var(--accent); border-color: var(--accent); color: white; animation: stepPulse 1.5s infinite; }
+    .step-node.failed { background: var(--red); border-color: var(--red); color: white; }
+    @keyframes stepPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+    }
+    .step-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 4px;
+      position: absolute;
+      bottom: -18px;
+      white-space: nowrap;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .step-connector {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+    .step-connector.done { background: var(--green); }
+
+    /* ── Log panel ── */
+    .log-panel { overflow-y: auto; padding: 16px 24px; font-family: var(--mono); font-size: 12px; line-height: 1.7; }
+    .log-line { display: flex; gap: 12px; padding: 2px 0; }
+    .log-line:hover { background: var(--surface2); margin: 0 -24px; padding: 2px 24px; }
+    .log-ts { color: var(--muted); flex-shrink: 0; font-size: 11px; }
+    .log-src { flex-shrink: 0; width: 56px; text-align: right; }
+    .log-src.agent { color: var(--accent); }
+    .log-src.sandbox { color: var(--blue); }
+    .log-src.system { color: var(--muted); }
+    .log-msg { color: var(--text); word-break: break-word; }
+    .log-msg.warn { color: var(--yellow); }
+    .log-msg.error { color: var(--red); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 48px; opacity: 0.3; }
+    .empty-text { font-size: 14px; }
+
+    /* ── Trigger modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 480px;
+      max-width: 95vw;
+    }
+    .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .preset-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+    .field input, .field textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+    .field textarea { min-height: 80px; resize: vertical; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-submit {
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* ── Bottom status bar ── */
+    .status-bar {
+      padding: 8px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+    }
+    .sse-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .sse-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .sse-dot.connected { background: var(--green); }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">Repro<span class="logo-badge">BETA</span></span>
+    <div class="health-indicator">
+      <div class="health-dot" id="healthDot"></div>
+      <span id="healthText">checking...</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar: Run list -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Runs</span>
+        <button class="trigger-btn" id="triggerBtn">+ New Run</button>
+      </div>
+      <div class="runs-list" id="runsList">
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Loading...</div>
+      </div>
+    </aside>
+
+    <!-- Main: Timeline + Logs -->
+    <main class="main" id="mainPanel">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🔬</div>
+        <div class="empty-text">Select a run to view details</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Trigger Modal -->
+  <div class="modal-overlay" id="triggerModal">
+    <div class="modal">
+      <h2>Trigger New Run</h2>
+      <div style="margin-bottom: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <span style="font-size: 11px; color: var(--muted)">Presets:</span>
+        <button type="button" class="preset-btn" onclick="loadPreset('off-by-one')">Off-by-one</button>
+        <button type="button" class="preset-btn" onclick="loadPreset('async-race')">Async race</button>
+        <button type="button" class="preset-btn" onclick="loadPreset('null-handling')">Null pointer</button>
+      </div>
+      <div class="field">
+        <label>GitHub Repo URL</label>
+        <input type="url" id="repoUrl" placeholder="https://github.com/owner/repo" />
+      </div>
+      <div class="field">
+        <label>Issue Number</label>
+        <input type="number" id="issueNumber" placeholder="42" min="1" />
+      </div>
+      <div class="field">
+        <label>Issue Title</label>
+        <input type="text" id="issueTitle" placeholder="Bug: off-by-one in sum function" />
+      </div>
+      <div class="field">
+        <label>Issue Body</label>
+        <textarea id="issueBody" placeholder="Describe the bug..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button class="btn-submit" id="submitBtn">Start Run →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────────
+    let activeRunId = null;
+    let globalSse = null;
+    let runSse = null;
+    let runs = {};
+
+    const STATUSES = ['queued', 'cloning', 'reproducing', 'patching', 'verifying', 'pr_opened'];
+
+    const PRESETS = {
+      'off-by-one': {
+        repoUrl: 'demo:off-by-one',
+        issueNumber: 1,
+        issueTitle: 'Bug: sumTo misses the last element in summation',
+        issueBody: 'The function sumTo(n) should compute the sum of integers from 1 to n inclusive, but sumTo(5) returns 10 instead of 15 due to an off-by-one loop condition.',
+      },
+      'async-race': {
+        repoUrl: 'demo:async-race',
+        issueNumber: 2,
+        issueTitle: 'Bug: AsyncCounter loses counts under concurrent increments',
+        issueBody: 'Calling concurrentIncrement(5) produces an incorrect count because AsyncCounter.increment is not atomic across event loop ticks.',
+      },
+      'null-handling': {
+        repoUrl: 'demo:null-handling',
+        issueNumber: 3,
+        issueTitle: 'Bug: getDisplayName throws TypeError on null/undefined user',
+        issueBody: 'getDisplayName throws Cannot read properties of null when user is null or undefined instead of falling back to default or guest.',
+      },
+    };
+
+    function loadPreset(key) {
+      const p = PRESETS[key];
+      if (!p) return;
+      document.getElementById('repoUrl').value = p.repoUrl;
+      document.getElementById('issueNumber').value = p.issueNumber;
+      document.getElementById('issueTitle').value = p.issueTitle;
+      document.getElementById('issueBody').value = p.issueBody;
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function init() {
+      await checkHealth();
+      await loadRuns();
+      connectGlobalSse();
+      setInterval(loadRuns, 10000);
+      setInterval(checkHealth, 15000);
+    }
+
+    async function checkHealth() {
+      try {
+        const r = await fetch('/health');
+        const data = await r.json();
+        const dot = document.getElementById('healthDot');
+        const txt = document.getElementById('healthText');
+        dot.className = 'health-dot ' + (data.status === 'ok' ? 'ok' : 'err');
+        txt.textContent = data.status === 'ok' ? 'All systems operational' : 'Degraded: ' + JSON.stringify(data.checks);
+      } catch {
+        document.getElementById('healthDot').className = 'health-dot err';
+        document.getElementById('healthText').textContent = 'Cannot reach server';
+      }
+    }
+
+    async function loadRuns() {
+      try {
+        const r = await fetch('/api/runs');
+        const data = await r.json();
+        data.forEach(run => runs[run.id] = run);
+        renderRunsList(data);
+      } catch(e) {
+        console.error('Failed to load runs', e);
+      }
+    }
+
+    // ── Sidebar run list ──────────────────────────────────────────────────────
+    function renderRunsList(runList) {
+      const list = document.getElementById('runsList');
+      if (!runList.length) {
+        list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">No runs yet. Trigger one!</div>';
+        return;
+      }
+      list.innerHTML = runList.map(run => {
+        const repoName = run.repo_url.replace('https://github.com/', '');
+        const time = new Date(run.created_at).toLocaleTimeString();
+        const active = run.id === activeRunId ? 'active' : '';
+        return `<div class="run-item ${active}" onclick="selectRun('${run.id}')" id="run-item-${run.id}">
+          <div class="run-item-repo">${repoName}</div>
+          <div class="run-item-meta">
+            <span class="status-pill status-${run.status}">${run.status}</span>
+            <span>#${run.issue_number}</span>
+            <span>${time}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Select run ────────────────────────────────────────────────────────────
+    async function selectRun(runId) {
+      activeRunId = runId;
+      document.querySelectorAll('.run-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('run-item-' + runId)?.classList.add('active');
+
+      // Close previous SSE
+      if (runSse) { runSse.close(); runSse = null; }
+
+      const r = await fetch('/api/runs/' + runId);
+      const { run, steps, logs } = await r.json();
+      renderMainPanel(run, logs);
+      connectRunSse(runId);
+    }
+
+    // ── Main panel ────────────────────────────────────────────────────────────
+    function renderMainPanel(run, logs) {
+      const repoName = run.repo_url.replace('https://github.com/', '');
+      const main = document.getElementById('mainPanel');
+      main.innerHTML = `
+        <div class="run-header">
+          <div class="run-title">${run.issue_title || '#' + run.issue_number}</div>
+          <div class="run-subtitle">${repoName} · Run ${run.id.slice(0,8)} · ${new Date(run.created_at).toLocaleString()}</div>
+          ${run.pr_url ? '<a href="'+run.pr_url+'" target="_blank" style="font-size:12px;color:var(--green);margin-top:4px;display:inline-block">→ View PR</a>' : ''}
+          ${run.failure_reason ? '<div style="font-size:12px;color:var(--red);margin-top:4px">❌ '+run.failure_reason+'</div>' : ''}
+        </div>
+        <div class="timeline" style="padding-bottom:32px" id="runTimeline"></div>
+        <div class="log-panel" id="logPanel"></div>
+        <div class="status-bar">
+          <span class="sse-badge"><div class="sse-dot" id="sseDot"></div> <span id="sseStatus">connecting...</span></span>
+          <span id="tokenUsage">${run.token_usage} tokens used</span>
+          <span id="attemptCount">Attempt ${run.attempt}</span>
+        </div>
+      `;
+      renderTimeline(run.status);
+      logs.forEach(l => appendLogLine(l, false));
+      const logPanel = document.getElementById('logPanel');
+      if (logPanel) logPanel.scrollTop = logPanel.scrollHeight;
+    }
+
+    function renderTimeline(currentStatus) {
+      const steps = ['cloning','reproducing','patching','verifying','pr_opened'];
+      const isFailed = currentStatus === 'failed';
+      const currentIdx = steps.indexOf(currentStatus);
+      const timeline = document.getElementById('runTimeline');
+      if (!timeline) return;
+
+      timeline.innerHTML = steps.map((s, i) => {
+        let nodeClass = '';
+        if (isFailed && i === currentIdx) nodeClass = 'failed';
+        else if (i < currentIdx || currentStatus === 'pr_opened') nodeClass = 'done';
+        else if (i === currentIdx) nodeClass = 'active';
+
+        const connector = (i < steps.length - 1)
+          ? `<div class="step-connector ${i < currentIdx || currentStatus === 'pr_opened' ? 'done' : ''}"></div>`
+          : '';
+
+        const icon = nodeClass === 'done' ? '✓' : (nodeClass === 'failed' ? '✕' : (i+1));
+
+        return `
+          <div class="timeline-step">
+            <div style="position:relative">
+              <div class="step-node ${nodeClass}">${icon}</div>
+              <div class="step-label">${s}</div>
+            </div>
+            ${connector}
+          </div>`;
+      }).join('');
+    }
+
+    function appendLogLine(log, scroll = true) {
+      const panel = document.getElementById('logPanel');
+      if (!panel) return;
+      const ts = new Date(log.created_at || log.ts).toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      div.innerHTML = `
+        <span class="log-ts">${ts}</span>
+        <span class="log-src ${log.source}">${log.source}</span>
+        <span class="log-msg ${log.level}">${escHtml(log.message)}</span>
+      `;
+      panel.appendChild(div);
+      if (scroll) panel.scrollTop = panel.scrollHeight;
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── SSE connections ───────────────────────────────────────────────────────
+    function connectGlobalSse() {
+      globalSse = new EventSource('/api/stream');
+      globalSse.addEventListener('status', e => {
+        const data = JSON.parse(e.data);
+        // Update sidebar pill
+        const pill = document.querySelector('#run-item-' + data.runId + ' .status-pill');
+        if (pill) {
+          pill.className = 'status-pill status-' + data.status;
+          pill.textContent = data.status;
+        }
+      });
+    }
+
+    function connectRunSse(runId) {
+      runSse = new EventSource('/api/runs/' + runId + '/stream');
+
+      runSse.addEventListener('log', e => {
+        const data = JSON.parse(e.data);
+        appendLogLine(data);
+      });
+
+      runSse.addEventListener('status', e => {
+        const data = JSON.parse(e.data);
+        renderTimeline(data.status);
+        const dot = document.getElementById('sseDot');
+        const statusEl = document.getElementById('sseStatus');
+        if (dot) dot.className = 'sse-dot connected';
+        if (statusEl) statusEl.textContent = 'live · ' + data.status;
+      });
+
+      runSse.onopen = () => {
+        const dot = document.getElementById('sseDot');
+        const statusEl = document.getElementById('sseStatus');
+        if (dot) dot.className = 'sse-dot connected';
+        if (statusEl) statusEl.textContent = 'connected · live';
+      };
+
+      runSse.onerror = () => {
+        const dot = document.getElementById('sseDot');
+        const statusEl = document.getElementById('sseStatus');
+        if (dot) dot.className = 'sse-dot';
+        if (statusEl) statusEl.textContent = 'disconnected';
+      };
+    }
+
+    // ── Trigger modal ─────────────────────────────────────────────────────────
+    document.getElementById('triggerBtn').onclick = () => {
+      document.getElementById('triggerModal').classList.add('open');
+    };
+    document.getElementById('cancelBtn').onclick = () => {
+      document.getElementById('triggerModal').classList.remove('open');
+    };
+    document.getElementById('submitBtn').onclick = async () => {
+      const repoUrl = document.getElementById('repoUrl').value.trim();
+      const issueNumber = parseInt(document.getElementById('issueNumber').value);
+      const issueTitle = document.getElementById('issueTitle').value.trim();
+      const issueBody = document.getElementById('issueBody').value.trim();
+
+      if (!repoUrl || !issueNumber) {
+        alert('Repo URL and issue number are required');
+        return;
+      }
+
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = 'Starting...';
+      btn.disabled = true;
+
+      try {
+        const r = await fetch('/api/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repoUrl, issueNumber, issueTitle, issueBody }),
+        });
+        const data = await r.json();
+        document.getElementById('triggerModal').classList.remove('open');
+        await loadRuns();
+        selectRun(data.runId);
+      } catch(e) {
+        alert('Failed to start run: ' + e.message);
+      } finally {
+        btn.textContent = 'Start Run →';
+        btn.disabled = false;
+      }
+    };
+
+    init();
+  </script>
+</body>
+</html>

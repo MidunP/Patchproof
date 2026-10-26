@@ -1,13 +1,14 @@
 import express from 'express';
 import path from 'path';
-import { config } from './config';
-import { runMigrations } from './db/migrations';
-import { createWorker } from './queue/jobs';
-import { processJob } from './queue/worker';
-import healthRouter from './routes/health';
-import runsRouter from './routes/runs';
-import triggerRouter from './routes/trigger';
-import { attachSseForRun, attachSseGlobal } from './sse/stream';
+import { config } from './config.js';
+import { runMigrations } from './db/migrations.js';
+import { createWorker } from './queue/jobs.js';
+import { processJob } from './queue/worker.js';
+import healthRouter from './routes/health.js';
+import runsRouter from './routes/runs.js';
+import triggerRouter from './routes/trigger.js';
+import webhookRouter from './github/webhook.js';
+import { attachSseForRun, attachSseGlobal } from './sse/stream.js';
 
 async function main() {
   // ── 1. Run DB migrations ───────────────────────────────────────────────────
@@ -28,6 +29,7 @@ async function main() {
   app.use('/health', healthRouter);
   app.use('/api/runs', runsRouter);
   app.use('/api/trigger', triggerRouter);
+  app.use('/webhook', webhookRouter);
 
   // ── SSE routes ─────────────────────────────────────────────────────────────
   app.get('/api/runs/:id/stream', (req, res) => {
