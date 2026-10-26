@@ -118,14 +118,14 @@ tests/
 | M5 | ✅ Done | GitHub integration: HMAC webhook verification, branch push, PR creation |
 | M6 | ✅ Done | Live dashboard: SSE streaming timeline, color-coded logs, trigger modal |
 | M7 | ✅ Done | Robustness: demo seeds, token budgets, attempt caps, error recovery |
-| M8 | ✅ Done | Tests & Documentation: 35 passing unit tests, design log, limitations |
+| M8 | ✅ Done | Tests & Documentation: 68 passing unit tests across 8 suites, design log, limitations |
 
 ---
 
 ## Test Suite
 
 ```bash
-# Run the complete test suite (49 tests)
+# Run the complete test suite (68 tests)
 npm test
 ```
 
@@ -134,6 +134,9 @@ npm test
 - `tests/routes.test.ts` (4 tests): HTTP routes (`/health`, `/api/trigger`, `/api/runs`) input validation and status codes
 - `tests/github.test.ts` (7 tests): Repo URL parsing, webhook HMAC-SHA256 signature verification, PR report builder
 - `tests/prompts.test.ts` (4 tests): System prompt rules, Phase 1 (reproduce) and Phase 2 (patch) prompt construction
+- `tests/sandbox.test.ts` (7 tests): Memory limit string parsing, host temporary directory cleanup, workspace configuration
+- `tests/agent.test.ts` (4 tests): Agent reasoning loop with MockLLMProvider (reproduction, patch completion, token budgets)
+- `tests/seeds.test.ts` (8 tests): Demo seed repository baseline validity and planted bug verification (off-by-one, async-race, null-handling)
 
 ---
 

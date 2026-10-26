@@ -16,6 +16,6 @@ export function getDisplayName(user: User | null | undefined): string {
 }
 
 export function formatUserList(users: Array<User | null>): string[] {
-  // BUG: .filter(Boolean) doesn't narrow type in TS, and null entries still reach getDisplayName
-  return users.filter(Boolean).map(u => getDisplayName(u as User));
+  // BUG: missing null guard — crashes if any user in array is null
+  return users.map(u => getDisplayName(u as User));
 }

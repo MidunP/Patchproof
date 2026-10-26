@@ -95,7 +95,7 @@ async function ensureImage(image: string): Promise<void> {
 }
 
 /** Convert memory limit string (e.g. "512m", "1g") to bytes */
-function parseMemLimit(limit: string): number {
+export function parseMemLimit(limit: string): number {
   const lower = limit.toLowerCase();
   if (lower.endsWith('g')) return parseFloat(lower) * 1024 * 1024 * 1024;
   if (lower.endsWith('m')) return parseFloat(lower) * 1024 * 1024;
