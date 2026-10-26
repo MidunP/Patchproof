@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import { config } from './config.js';
 import { runMigrations } from './db/migrations.js';
@@ -22,8 +23,12 @@ async function main() {
   const app = express();
   app.use(express.json());
 
-  // Serve dashboard static files
-  app.use(express.static(path.join(__dirname, 'dashboard')));
+  // Serve dashboard static files with dist/src fallback
+  const dashboardDir = fs.existsSync(path.join(__dirname, 'dashboard'))
+    ? path.join(__dirname, 'dashboard')
+    : path.join(process.cwd(), 'src', 'dashboard');
+
+  app.use(express.static(dashboardDir));
 
   // ── API routes ─────────────────────────────────────────────────────────────
   app.use('/health', healthRouter);
@@ -42,7 +47,7 @@ async function main() {
 
   // ── Fallback: serve dashboard for any unknown GET ──────────────────────────
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
+    res.sendFile(path.join(dashboardDir, 'index.html'));
   });
 
   // ── 4. Start listening ─────────────────────────────────────────────────────

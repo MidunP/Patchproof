@@ -7,7 +7,10 @@ import { pool } from './client';
  * Simple and idempotent — uses IF NOT EXISTS throughout.
  */
 export async function runMigrations(): Promise<void> {
-  const schemaPath = path.join(__dirname, 'schema.sql');
+  let schemaPath = path.join(__dirname, 'schema.sql');
+  if (!fs.existsSync(schemaPath)) {
+    schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
+  }
   const sql = fs.readFileSync(schemaPath, 'utf-8');
 
   const client = await pool.connect();
