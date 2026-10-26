@@ -21,9 +21,11 @@ vi.mock('../src/sandbox/executor', () => ({
 }));
 
 import { runTests } from '../src/sandbox/tools';
+import { execInSandbox } from '../src/sandbox/executor';
 import { runVerificationGate, formatGateReport } from '../src/verification/gate';
 
 const mockRunTests = vi.mocked(runTests);
+const mockExecInSandbox = vi.mocked(execInSandbox);
 
 // Helper: build a TestRunResult
 function makeTestResult(passed: number, failed: number, exitCode = failed > 0 ? 1 : 0) {
@@ -123,6 +125,49 @@ describe('Verification Gate', () => {
 
     expect(result.passed).toBe(false);
     expect(result.failureReason).toMatch(/still FAILS after the fix/);
+  });
+
+  it('❌ FAILS when reproduction test was tampered with (hash mismatch)', async () => {
+    // Return a hash that differs from expected
+    mockExecInSandbox.mockResolvedValueOnce({
+      stdout: '1111111111111111111111111111111111111111111111111111111111111111  /workspace/tests/bug.test.ts\n',
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+    });
+
+    const result = await runVerificationGate({
+      runId: 'test-run',
+      sandbox: fakeSandbox,
+      reproductionTestPath: 'tests/bug.test.ts',
+      expectedTestHash: '2222222222222222222222222222222222222222222222222222222222222222',
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.failureReason).toMatch(/test tampering detected/);
+  });
+
+  it('❌ FAILS when repro test failed due to syntax/crash rather than assertion failure', async () => {
+    mockRunTests
+      .mockResolvedValueOnce(makeTestResult(1, 0)) // after repro: PASS
+      .mockResolvedValueOnce({
+        ok: false,
+        passed: 0,
+        failed: 0, // 0 failed assertions, but exitCode !== 0 (syntax / crash error)
+        total: 0,
+        output: 'SyntaxError: Unexpected token',
+        exitCode: 1,
+      })
+      .mockResolvedValueOnce(makeTestResult(5, 0)); // full suite
+
+    const result = await runVerificationGate({
+      runId: 'test-run',
+      sandbox: fakeSandbox,
+      reproductionTestPath: 'tests/bug.test.ts',
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.failureReason).toMatch(/crash, compilation, or setup error/);
   });
 });
 

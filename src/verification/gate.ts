@@ -2,6 +2,7 @@ import type { SandboxContainer } from '../sandbox/runner.js';
 import { runTests, type TestRunResult } from '../sandbox/tools.js';
 import { appendLog } from '../db/runs.js';
 import { emitLog } from '../sse/stream.js';
+import { execInSandbox } from '../sandbox/executor.js';
 
 export interface GateResult {
   passed: boolean;
@@ -14,27 +15,81 @@ export interface GateResult {
 }
 
 /**
+ * Compute the SHA-256 hash of a file inside the sandbox.
+ */
+export async function getFileHash(
+  sandbox: SandboxContainer,
+  filePath: string,
+): Promise<string | null> {
+  const result = await execInSandbox(sandbox, ['sha256sum', filePath]);
+  if (result.exitCode !== 0 || !result.stdout) return null;
+  const match = result.stdout.trim().match(/^([a-f0-9]{64})/i);
+  return match ? match[1]!.toLowerCase() : null;
+}
+
+function makeEmptyTestResult(): TestRunResult {
+  return {
+    ok: false,
+    passed: 0,
+    failed: 0,
+    total: 0,
+    output: '',
+    exitCode: 1,
+  };
+}
+
+/**
  * The verification gate.
  *
- * Invariant: a PR is only opened when ALL three conditions hold:
- *   1. The reproduction test FAILS before the fix (confirmed bug exists)
- *   2. The reproduction test PASSES after the fix (confirmed fix works)
- *   3. The full test suite PASSES after the fix (no regressions)
+ * Invariant: a PR is only opened when ALL conditions hold:
+ *   1. The reproduction test was not modified or tampered with during the patch phase
+ *   2. The reproduction test FAILS before the fix (confirmed bug exists via assertion failure)
+ *   3. The reproduction test PASSES after the fix (confirmed fix works)
+ *   4. The full test suite PASSES after the fix (no regressions)
  *
  * This function is called after the agent has written the test AND applied the fix.
  * The sandbox already has the fix applied when this is called.
  *
- * "Before" state is captured by temporarily reverting the fix via git.
+ * "Before" state is captured by temporarily reverting the fix via git stash.
  */
 export async function runVerificationGate(opts: {
   runId: string;
   sandbox: SandboxContainer;
   reproductionTestPath: string;
+  expectedTestHash?: string;
   timeoutMs?: number;
 }): Promise<GateResult> {
-  const { runId, sandbox, reproductionTestPath, timeoutMs = 60_000 } = opts;
+  const { runId, sandbox, reproductionTestPath, expectedTestHash, timeoutMs = 60_000 } = opts;
 
   await log(runId, '[gate] Starting verification gate');
+
+  // ── Step 0: Check reproduction test integrity (tamper detection) ────────────
+  if (expectedTestHash) {
+    const currentHash = await getFileHash(sandbox, reproductionTestPath);
+    if (!currentHash) {
+      return {
+        passed: false,
+        failureReason: `Reproduction test file "${reproductionTestPath}" was deleted or cannot be read.`,
+        detail: {
+          beforeRepro: makeEmptyTestResult(),
+          afterRepro: makeEmptyTestResult(),
+          afterFull: makeEmptyTestResult(),
+        },
+      };
+    }
+    if (currentHash !== expectedTestHash.toLowerCase()) {
+      return {
+        passed: false,
+        failureReason:
+          'Reproduction test was modified during the patch phase — test tampering detected.',
+        detail: {
+          beforeRepro: makeEmptyTestResult(),
+          afterRepro: makeEmptyTestResult(),
+          afterFull: makeEmptyTestResult(),
+        },
+      };
+    }
+  }
 
   // ── Step 1: Run the repro test in CURRENT state (fix applied) ────────────────
   await log(runId, '[gate] Step 1: Running repro test AFTER fix');
@@ -46,8 +101,8 @@ export async function runVerificationGate(opts: {
   );
 
   // ── Step 2: Revert fix via git to check BEFORE state ─────────────────────────
-  await log(runId, '[gate] Step 2: Reverting fix (git stash) to check before state');
-  const stashResult = await execGit(sandbox, 'git stash');
+  await log(runId, '[gate] Step 2: Reverting fix (git stash -u) to check before state');
+  const stashResult = await execGit(sandbox, 'git stash -u');
   await log(runId, `[gate] git stash: ${stashResult}`);
 
   const beforeRepro = await runTests(sandbox, reproductionTestPath, timeoutMs);
@@ -72,7 +127,16 @@ export async function runVerificationGate(opts: {
   );
 
   // ── Evaluate gate conditions ──────────────────────────────────────────────────
-  const reproFailedBefore = !beforeRepro.ok || beforeRepro.failed > 0;
+  if (!beforeRepro.ok && beforeRepro.failed === 0) {
+    return {
+      passed: false,
+      failureReason:
+        'Reproduction test failed due to a crash, compilation, or setup error rather than an assertion failure before the fix.',
+      detail: { beforeRepro, afterRepro, afterFull },
+    };
+  }
+
+  const reproFailedBefore = beforeRepro.failed > 0;
   const reproPassedAfter = afterRepro.ok && afterRepro.failed === 0 && afterRepro.passed > 0;
   const fullSuitePassedAfter = afterFull.ok && afterFull.failed === 0;
 
@@ -143,7 +207,6 @@ ${afterFull.output.slice(0, 1000)}
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
-import { execInSandbox } from '../sandbox/executor.js';
 
 async function execGit(sandbox: SandboxContainer, cmd: string): Promise<string> {
   const result = await execInSandbox(sandbox, ['sh', '-c', cmd]);
