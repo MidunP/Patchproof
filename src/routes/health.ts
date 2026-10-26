@@ -4,7 +4,7 @@ import { getQueue } from '../queue/jobs';
 
 const router = Router();
 
-router.get('/health', async (_req: Request, res: Response) => {
+router.get(['/', '/health'], async (_req: Request, res: Response) => {
   const checks: Record<string, { ok: boolean; detail?: string }> = {};
 
   // ── Postgres ──────────────────────────────────────────────────────────────
