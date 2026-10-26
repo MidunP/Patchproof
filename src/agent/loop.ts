@@ -129,6 +129,7 @@ export async function runAgentLoop(opts: {
   issueTitle: string;
   issueBody: string;
   phase: 'reproduce' | 'patch';
+  previousAttempts?: string;
   maxAttempts?: number;
 }): Promise<AgentResult> {
   const {
@@ -139,6 +140,7 @@ export async function runAgentLoop(opts: {
     issueTitle,
     issueBody,
     phase,
+    previousAttempts,
     maxAttempts = config.AGENT_MAX_ATTEMPTS,
   } = opts;
 
@@ -147,7 +149,7 @@ export async function runAgentLoop(opts: {
     { role: 'system', content: buildSystemPrompt() },
     {
       role: 'user',
-      content: buildUserPrompt({ repoUrl, issueNumber, issueTitle, issueBody, phase }),
+      content: buildUserPrompt({ repoUrl, issueNumber, issueTitle, issueBody, phase, previousAttempts }),
     },
   ];
 

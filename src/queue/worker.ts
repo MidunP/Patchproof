@@ -5,7 +5,7 @@ import { emitStatus, emitLog } from '../sse/stream.js';
 import { cloneAndInstall, cleanupHostDir } from '../sandbox/clone.js';
 import { destroySandbox } from '../sandbox/runner.js';
 import { runAgentLoop } from '../agent/loop.js';
-import { runVerificationGate } from '../verification/gate.js';
+import { runVerificationGate, getFileHash, type GateResult } from '../verification/gate.js';
 import { config } from '../config.js';
 import { pushBranch, createPR } from '../github/pr.js';
 
@@ -73,37 +73,64 @@ export async function processJob(job: Job<ReproJobData>): Promise<void> {
 
     const reproTestPath = reproResult.reproductionTestPath;
     await log(`Reproduction test written: ${reproTestPath}`, 'info', 'system');
+    const reproTestHash = await getFileHash(sandbox, reproTestPath);
 
-    // ── 3. PATCHING ────────────────────────────────────────────────────────
-    await transition('patching');
-    const patchResult = await runAgentLoop({
-      runId,
-      sandbox,
-      repoUrl,
-      issueNumber,
-      issueTitle,
-      issueBody,
-      phase: 'patch',
-      maxAttempts: config.AGENT_MAX_ATTEMPTS,
-    });
-    await updateRun(runId, { token_usage: patchResult.tokensUsed });
+    // ── 3. PATCHING & 4. VERIFYING (Iterative Feedback Loop) ───────────────
+    let attempt = 0;
+    let gateResult: GateResult | null = null;
+    let lastFailureFeedback = '';
 
-    if (!patchResult.success) {
-      await fail(`Patching failed: ${patchResult.reason}`);
-      return;
+    while (attempt < config.AGENT_MAX_ATTEMPTS) {
+      attempt++;
+      await updateRun(runId, { attempt });
+      await log(`[attempt ${attempt}/${config.AGENT_MAX_ATTEMPTS}] Starting patch synthesis`, 'info', 'system');
+
+      await transition('patching');
+      const patchResult = await runAgentLoop({
+        runId,
+        sandbox,
+        repoUrl,
+        issueNumber,
+        issueTitle,
+        issueBody,
+        phase: 'patch',
+        previousAttempts: lastFailureFeedback || undefined,
+        maxAttempts: 1,
+      });
+      await updateRun(runId, { token_usage: patchResult.tokensUsed });
+
+      if (!patchResult.success) {
+        lastFailureFeedback = `Patch attempt #${attempt} failed: ${patchResult.reason}`;
+        await log(lastFailureFeedback, 'warn', 'agent');
+        continue;
+      }
+
+      await transition('verifying');
+      gateResult = await runVerificationGate({
+        runId,
+        sandbox,
+        reproductionTestPath: reproTestPath,
+        expectedTestHash: reproTestHash ?? undefined,
+        timeoutMs: config.SANDBOX_TIMEOUT_MS,
+      });
+
+      if (gateResult.passed) {
+        await log(`Verification gate passed on attempt ${attempt} ✅`, 'info', 'system');
+        break;
+      }
+
+      lastFailureFeedback = `Verification gate failed on attempt #${attempt}: ${gateResult.failureReason}`;
+      if (gateResult.detail.afterRepro.failed > 0) {
+        lastFailureFeedback += `\nRepro test still failing: ${gateResult.detail.afterRepro.output.slice(0, 500)}`;
+      }
+      if (gateResult.detail.afterFull.failed > 0) {
+        lastFailureFeedback += `\nRegression in full suite: ${gateResult.detail.afterFull.output.slice(0, 500)}`;
+      }
+      await log(`Attempt #${attempt} failed verification: ${gateResult.failureReason}`, 'warn', 'system');
     }
 
-    // ── 4. VERIFYING ───────────────────────────────────────────────────────
-    await transition('verifying');
-    const gateResult = await runVerificationGate({
-      runId,
-      sandbox,
-      reproductionTestPath: reproTestPath,
-      timeoutMs: config.SANDBOX_TIMEOUT_MS,
-    });
-
-    if (!gateResult.passed) {
-      await fail(`Verification gate failed: ${gateResult.failureReason}`);
+    if (!gateResult || !gateResult.passed) {
+      await fail(`All ${config.AGENT_MAX_ATTEMPTS} attempts failed verification: ${gateResult?.failureReason ?? 'Inconclusive run'}`);
       return;
     }
 
