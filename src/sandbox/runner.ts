@@ -16,6 +16,7 @@ export interface SandboxContainer {
   id: string;
   container: Docker.Container;
   workDir: string;
+  hostWorkDir?: string;
 }
 
 const WORKSPACE = '/workspace';
@@ -57,10 +58,30 @@ export async function createSandbox(
 
   await container.start();
 
+  // Air-gapped containers (NetworkDisabled: true) in Alpine Linux lack localhost in /etc/hosts.
+  // Vitest and Node require localhost to resolve loopback IPC without EAI_AGAIN.
+  try {
+    const execHosts = await container.exec({
+      Cmd: ['sh', '-c', 'echo "127.0.0.1 localhost" >> /etc/hosts'],
+      AttachStdout: true,
+      AttachStderr: true,
+    });
+    const stream = await execHosts.start({ hijack: true, stdin: false });
+    await new Promise<void>((resolve) => {
+      container.modem.demuxStream(stream, { write: () => {} }, { write: () => {} });
+      stream.on('end', resolve);
+      stream.on('error', resolve);
+      setTimeout(resolve, 3000);
+    });
+  } catch {
+    // best-effort
+  }
+
   return {
     id: container.id,
     container,
     workDir: WORKSPACE,
+    hostWorkDir,
   };
 }
 

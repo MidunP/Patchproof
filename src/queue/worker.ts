@@ -1,3 +1,5 @@
+import fs from 'fs';
+import { simpleGit } from 'simple-git';
 import { Job } from 'bullmq';
 import type { ReproJobData } from './jobs.js';
 import { transitionRun, updateRun, appendLog } from '../db/runs.js';
@@ -74,6 +76,18 @@ export async function processJob(job: Job<ReproJobData>): Promise<void> {
     const reproTestPath = reproResult.reproductionTestPath;
     await log(`Reproduction test written: ${reproTestPath}`, 'info', 'system');
     const reproTestHash = await getFileHash(sandbox, reproTestPath);
+
+    // Commit the reproduction test to the git repo so that the baseline HEAD has the test
+    if (hostWorkDir && fs.existsSync(hostWorkDir)) {
+      try {
+        const git = simpleGit(hostWorkDir);
+        await git.add(reproTestPath);
+        await git.commit(`repro: add reproduction test ${reproTestPath}`);
+        await log('Reproduction test committed to repository baseline', 'info', 'system');
+      } catch (gitErr) {
+        await log(`[baseline] Note: could not commit repro test: ${gitErr}`, 'debug', 'system');
+      }
+    }
 
     // ── 3. PATCHING & 4. VERIFYING (Iterative Feedback Loop) ───────────────
     let attempt = 0;

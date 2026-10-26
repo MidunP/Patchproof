@@ -44,6 +44,17 @@ export async function cloneAndInstall(
     isDemoSeed = true;
   }
 
+  // Ensure .gitignore exists and ignores node_modules so git never touches symlinks
+  const gitignorePath = path.join(hostWorkDir, '.gitignore');
+  if (!fs.existsSync(gitignorePath)) {
+    fs.writeFileSync(gitignorePath, "node_modules/\n.env\ndist/\n");
+  } else {
+    const existing = fs.readFileSync(gitignorePath, 'utf-8');
+    if (!existing.includes('node_modules')) {
+      fs.appendFileSync(gitignorePath, "\nnode_modules/\n");
+    }
+  }
+
   if (isDemoSeed) {
     const git = simpleGit(hostWorkDir);
     await git.init();

@@ -1,3 +1,6 @@
+import path from 'path';
+import fs from 'fs';
+import { simpleGit } from 'simple-git';
 import type { SandboxContainer } from '../sandbox/runner.js';
 import { runTests, type TestRunResult } from '../sandbox/tools.js';
 import { appendLog } from '../db/runs.js';
@@ -101,9 +104,18 @@ export async function runVerificationGate(opts: {
   );
 
   // ── Step 2: Revert fix via git to check BEFORE state ─────────────────────────
-  await log(runId, '[gate] Step 2: Reverting fix (git stash -u) to check before state');
-  const stashResult = await execGit(sandbox, 'git stash -u');
-  await log(runId, `[gate] git stash: ${stashResult}`);
+  await log(runId, '[gate] Step 2: Reverting fix to check before state');
+  let patchDiff = '';
+  if (sandbox.hostWorkDir && fs.existsSync(sandbox.hostWorkDir)) {
+    try {
+      const git = simpleGit(sandbox.hostWorkDir);
+      patchDiff = await git.diff();
+      await git.reset(['--hard', 'HEAD']);
+      await log(runId, '[gate] Reverted working directory to baseline HEAD (reproduction test retained, fix reverted)');
+    } catch (e) {
+      await log(runId, `[gate] Git revert warning: ${e}`, 'warn');
+    }
+  }
 
   const beforeRepro = await runTests(sandbox, reproductionTestPath, timeoutMs);
   await log(
@@ -113,9 +125,19 @@ export async function runVerificationGate(opts: {
   );
 
   // ── Step 3: Re-apply the fix ──────────────────────────────────────────────────
-  await log(runId, '[gate] Step 3: Re-applying fix (git stash pop)');
-  const popResult = await execGit(sandbox, 'git stash pop');
-  await log(runId, `[gate] git stash pop: ${popResult}`);
+  await log(runId, '[gate] Step 3: Re-applying fix');
+  if (sandbox.hostWorkDir && fs.existsSync(sandbox.hostWorkDir) && patchDiff) {
+    try {
+      const git = simpleGit(sandbox.hostWorkDir);
+      const tempPatchPath = path.join(sandbox.hostWorkDir, '__patchproof.diff');
+      fs.writeFileSync(tempPatchPath, patchDiff, 'utf-8');
+      await git.raw(['apply', '__patchproof.diff']);
+      try { fs.unlinkSync(tempPatchPath); } catch {}
+      await log(runId, '[gate] Re-applied patch cleanly via git apply');
+    } catch (e) {
+      await log(runId, `[gate] Git apply warning: ${e}`, 'warn');
+    }
+  }
 
   // ── Step 4: Run the FULL suite ────────────────────────────────────────────────
   await log(runId, '[gate] Step 4: Running full test suite');
@@ -204,13 +226,6 @@ ${afterRepro.output.slice(0, 1000)}
 ${afterFull.output.slice(0, 1000)}
 \`\`\`
 `;
-}
-
-// ── Internal helpers ──────────────────────────────────────────────────────────
-
-async function execGit(sandbox: SandboxContainer, cmd: string): Promise<string> {
-  const result = await execInSandbox(sandbox, ['sh', '-c', cmd]);
-  return (result.stdout + result.stderr).trim();
 }
 
 async function log(

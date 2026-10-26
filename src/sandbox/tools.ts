@@ -163,15 +163,18 @@ export async function runTests(
     ? combined.slice(0, MAX_OUTPUT_CHARS) + `\n\n[Repro Output Truncated: ${combined.length - MAX_OUTPUT_CHARS} characters omitted]`
     : combined;
 
-  const counts = parseTestCounts(combined, runner);
+  const cleanCombined = combined.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
+  const counts = parseTestCounts(cleanCombined, runner);
+  const hasFailures = counts.failed > 0 || /FAIL\s+|AssertionError|TypeError:/.test(cleanCombined);
+  const isOk = !hasFailures && counts.passed > 0;
 
   return {
-    ok: result.exitCode === 0,
+    ok: isOk,
     passed: counts.passed,
     failed: counts.failed,
     total: counts.total,
     output: truncatedOutput,
-    exitCode: result.exitCode,
+    exitCode: isOk ? 0 : 1,
   };
 }
 
@@ -196,7 +199,7 @@ export function buildTestCmd(runner: TestRunner, filter?: string): string {
   const f = filter ? `"${filter}"` : '';
   switch (runner) {
     case 'vitest':
-      return `npx vitest run --reporter=verbose ${f} 2>&1 || true`;
+      return `npx vitest run --reporter=verbose --no-color ${f} 2>&1 || true`;
     case 'jest':
       return `npx jest --no-coverage --verbose ${f} 2>&1 || true`;
     default:
@@ -211,23 +214,47 @@ export function parseTestCounts(
 ): { passed: number; failed: number; total: number } {
   let passed = 0;
   let failed = 0;
+  const clean = output.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
 
   if (runner === 'vitest') {
-    // "Tests  3 passed | 1 failed (4)"
-    const match = output.match(/Tests\s+(\d+)\s+passed(?:\s+\|\s+(\d+)\s+failed)?/);
-    if (match) {
-      passed = parseInt(match[1] ?? '0', 10);
-      failed = parseInt(match[2] ?? '0', 10);
+    // Tests: X failed | Y passed (Z) or Tests X passed | Y failed
+    // Use multiline ^ so we don't accidentally match "Failed Tests 1"
+    const testsLineMatch = clean.match(/^\s*Tests\s+([^\n]+)/m);
+    if (testsLineMatch) {
+      const line = testsLineMatch[1]!;
+      const passMatch = line.match(/(\d+)\s+passed/);
+      const failMatch = line.match(/(\d+)\s+failed/);
+      if (passMatch) passed = parseInt(passMatch[1]!, 10);
+      if (failMatch) failed = parseInt(failMatch[1]!, 10);
     }
+
+    // Also check Test Files line if Tests line didn't yield counts
+    if (passed === 0 && failed === 0) {
+      const filesLineMatch = clean.match(/^\s*Test Files\s+([^\n]+)/m);
+      if (filesLineMatch) {
+        const line = filesLineMatch[1]!;
+        const passMatch = line.match(/(\d+)\s+passed/);
+        const failMatch = line.match(/(\d+)\s+failed/);
+        if (passMatch) passed = parseInt(passMatch[1]!, 10);
+        if (failMatch) failed = parseInt(failMatch[1]!, 10);
+      }
+    }
+
     // Also try: "✓ X tests" / "× X tests"
-    const passMatches = [...output.matchAll(/✓\s+(\d+)\s+test/g)];
-    const failMatches = [...output.matchAll(/×\s+(\d+)\s+test/g)];
+    const passMatches = [...clean.matchAll(/✓\s+(\d+)\s+test/g)];
+    const failMatches = [...clean.matchAll(/×\s+(\d+)\s+test/g)];
     if (passMatches.length > 0 || failMatches.length > 0) {
-      passed = passMatches.reduce((s, m) => s + parseInt(m[1] ?? '0', 10), 0);
-      failed = failMatches.reduce((s, m) => s + parseInt(m[1] ?? '0', 10), 0);
+      if (passed === 0) passed = passMatches.reduce((s, m) => s + parseInt(m[1] ?? '0', 10), 0);
+      if (failed === 0) failed = failMatches.reduce((s, m) => s + parseInt(m[1] ?? '0', 10), 0);
+    }
+
+    // Fallback: detect failed tests from Vitest FAIL lines or error traces
+    if (failed === 0 && (clean.includes('FAIL ') || clean.includes('AssertionError') || /TypeError: Cannot read properties/.test(clean))) {
+      const fileFails = [...clean.matchAll(/FAIL\s+([^\n]+)/g)];
+      failed = Math.max(1, fileFails.length);
     }
   } else if (runner === 'jest') {
-    const testsLineMatch = output.match(/Tests:\s+([^\n]+)/);
+    const testsLineMatch = clean.match(/^\s*Tests:\s+([^\n]+)/m) ?? clean.match(/Tests:\s+([^\n]+)/);
     if (testsLineMatch) {
       const line = testsLineMatch[1]!;
       const passMatch = line.match(/(\d+)\s+passed/);

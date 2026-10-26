@@ -6,7 +6,10 @@ import { enqueueRun } from '../queue/jobs';
 const router = Router();
 
 const TriggerBody = z.object({
-  repoUrl: z.string().url('Must be a valid GitHub URL'),
+  repoUrl: z.string().min(1).refine(
+    (s) => s.startsWith('demo:') || s.startsWith('seeds/') || /^https?:\/\//i.test(s),
+    { message: 'Must be a valid GitHub URL (https://github.com/...) or demo seed (e.g. demo:null-handling)' }
+  ),
   issueNumber: z.number().int().positive(),
   issueTitle: z.string().default(''),
   issueBody: z.string().default(''),
