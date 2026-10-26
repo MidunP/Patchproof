@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patchproof: Verified Bug Fixes for Engineering Teams</title>
+  <meta name="description" content="Autonomous bug reproduction and verified patching. Clones into an air-gapped Docker container, writes a reproduction test that fails first, synthesizes a fix, and opens a PR only when all five invariants pass." />
+
+  <style>
+    /* ─── Apple Design System Tokens ────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    :root {
+      /* Apple Pro Monochrome Palette */
+      --bg-base:          #000000;
+      --bg-surface:       #0d0d11;
+      --bg-surface-elev:  #141419;
+      --bg-surface-card:  #181820;
+      --bg-subtle:        #1f1f28;
+
+      /* Text Hierarchy (Apple Pro) */
+      --text-primary:     #f5f5f7;
+      --text-secondary:   #86868b;
+      --text-tertiary:    #515158;
+      --text-muted:       #3e3e46;
+
+      /* Precision Accents */
+      --accent-amber:     #e07a1e;
+      --accent-amber-glow: rgba(224, 122, 30, 0.15);
+      --accent-green:     #30d158;
+      --accent-green-dim: rgba(48, 209, 88, 0.12);
+      --accent-red:       #ff453a;
+      --accent-red-dim:   rgba(255, 69, 58, 0.12);
+      --accent-blue:      #2997ff;
+
+      /* Hairline Apple Borders */
+      --border-hairline:  rgba(255, 255, 255, 0.08);
+      --border-subtle:    rgba(255, 255, 255, 0.12);
+      --border-active:    rgba(255, 255, 255, 0.28);
+
+      /* Typography */
+      --font-apple:       -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono:        "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+      /* Apple Corner Radii */
+      --radius-sm:        8px;
+      --radius-md:        14px;
+      --radius-lg:        22px;
+      --radius-pill:      980px;
+
+      /* Shadows */
+      --shadow-apple-card: 0 12px 36px rgba(0, 0, 0, 0.45);
+      --shadow-apple-glow: 0 0 40px rgba(224, 122, 30, 0.06);
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-apple);
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* ─── Apple Frosted Navigation ────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 999;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border-hairline);
+      height: 52px;
+      transition: background 0.3s;
+    }
+
+    .nav-container {
+      max-width: 1140px;
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .nav-brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-amber);
+      box-shadow: 0 0 10px var(--accent-amber);
+    }
+
+    .nav-brand-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      letter-spacing: -0.01em;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-btn-secondary {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-hairline);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn-secondary:hover {
+      color: var(--text-primary);
+      border-color: var(--border-subtle);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .nav-btn-primary {
+      font-size: 12px;
+      font-weight: 500;
+      color: #000000;
+      background: #ffffff;
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn-primary:hover {
+      background: #e8e8ed;
+      transform: scale(1.02);
+    }
+
+    /* ─── Hero Section ────────────────────────────────────────────────────── */
+    #hero {
+      position: relative;
+      padding-top: 140px;
+      padding-bottom: 70px;
+      max-width: 1140px;
+      margin: 0 auto;
+      padding-left: 28px;
+      padding-right: 28px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-amber);
+      margin-bottom: 24px;
+      background: var(--accent-amber-glow);
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(224, 122, 30, 0.25);
+    }
+
+    .hero-eyebrow-ping {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-amber);
+    }
+
+    .hero-headline {
+      font-size: clamp(3.2rem, 7.2vw, 6.2rem);
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 1.02;
+      color: var(--text-primary);
+      max-width: 960px;
+      margin: 0 auto 24px;
+    }
+
+    .hero-headline span.accent {
+      color: var(--accent-amber);
+      font-weight: 600;
+    }
+
+    .hero-subhead {
+      font-size: clamp(1.1rem, 2vw, 1.35rem);
+      font-weight: 400;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      max-width: 700px;
+      margin: 0 auto 40px;
+      letter-spacing: -0.015em;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 64px;
+      flex-wrap: wrap;
+    }
+
+    .btn-apple-primary {
+      font-size: 15px;
+      font-weight: 500;
+      color: #000000;
+      background: #ffffff;
+      padding: 13px 28px;
+      border-radius: var(--radius-pill);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-apple-primary:hover {
+      background: #e8e8ed;
+      transform: scale(1.02);
+    }
+
+    .btn-apple-secondary {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-hairline);
+      padding: 13px 26px;
+      border-radius: var(--radius-pill);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-apple-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--border-subtle);
+    }
+
+    /* ─── Apple Studio Interactive Verification Console ───────────────────── */
+    .console-stage {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-apple-card), var(--shadow-apple-glow);
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .console-titlebar {
+      height: 48px;
+      background: #111115;
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 80px;
+    }
+
+    .window-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    .window-dot.close { background: #ff5f57; }
+    .window-dot.min   { background: #febc2e; }
+    .window-dot.zoom  { background: #28c840; }
+
+    .console-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .console-tab-btn {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .console-tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .console-tab-btn.active {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--border-hairline);
+    }
+
+    .console-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--accent-green);
+      background: var(--accent-green-dim);
+      border: 1px solid rgba(48, 209, 88, 0.2);
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
+    }
+
+    .console-status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent-green);
+    }
+
+    /* Scenario Switcher Toolbar */
+    .scenario-bar {
+      background: #141419;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .scenario-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .scenario-title strong {
+      color: var(--text-primary);
+    }
+
+    .scenario-chips {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scenario-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid var(--border-hairline);
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .scenario-chip:hover {
+      color: var(--text-primary);
+      border-color: var(--border-subtle);
+    }
+
+    .scenario-chip.selected {
+      background: rgba(224, 122, 30, 0.12);
+      border-color: var(--accent-amber);
+      color: var(--accent-amber);
+    }
+
+    /* Console Content Panes */
+    .console-view {
+      display: none;
+      padding: 24px 28px;
+      min-height: 380px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.85;
+      overflow-x: auto;
+    }
+
+    .console-view.active {
+      display: block;
+    }
+
+    /* Terminal Log Syntax */
+    .log-row {
+      display: flex;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+
+    .log-ts {
+      color: var(--text-muted);
+      width: 72px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .log-source {
+      width: 74px;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+      user-select: none;
+    }
+
+    .log-source.sys  { color: #6b8fb8; }
+    .log-source.dock { color: #8a7ca8; }
+    .log-source.agent{ color: var(--accent-amber); }
+    .log-source.gate { color: var(--accent-green); }
+
+    .log-msg {
+      color: #e5e5ea;
+      word-break: break-word;
+    }
+
+    .log-msg .badge-fail {
+      color: var(--accent-red);
+      background: var(--accent-red-dim);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .log-msg .badge-pass {
+      color: var(--accent-green);
+      background: var(--accent-green-dim);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .log-msg .meta {
+      color: var(--text-secondary);
+    }
+
+    /* Code Diff Styling */
+    .diff-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+
+    .diff-table tr td {
+      padding: 2px 8px;
+      line-height: 1.6;
+    }
+
+    .diff-table .ln {
+      width: 40px;
+      color: var(--text-muted);
+      text-align: right;
+      user-select: none;
+    }
+
+    .diff-add {
+      background: rgba(48, 209, 88, 0.08);
+      color: #92e6a7;
+    }
+
+    .diff-del {
+      background: rgba(255, 69, 58, 0.08);
+      color: #ff9f9a;
+    }
+
+    /* Verification Invariants Grid Inside Console */
+    .invariants-checklist {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .inv-check-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .inv-check-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .inv-badge-status {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .inv-badge-status.pass {
+      background: var(--accent-green-dim);
+      color: var(--accent-green);
+      border: 1px solid rgba(48, 209, 88, 0.25);
+    }
+
+    .inv-info-title {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .inv-info-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .inv-proof-hash {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Console Footer Telemetry */
+    .console-footer-bar {
+      height: 38px;
+      background: #0d0d10;
+      border-top: 1px solid var(--border-hairline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .telemetry-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .telemetry-group span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .telemetry-group strong {
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    /* ─── Metric Spec Strip (Apple Specs Style) ───────────────────────────── */
+    .spec-strip {
+      max-width: 1140px;
+      margin: 80px auto;
+      padding: 0 28px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border-hairline);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .spec-card {
+      background: var(--bg-surface);
+      padding: 36px 30px;
+      text-align: left;
+    }
+
+    .spec-number {
+      font-size: 3.4rem;
+      font-weight: 600;
+      letter-spacing: -0.05em;
+      line-height: 1;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .spec-number sup {
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--text-secondary);
+      vertical-align: super;
+    }
+
+    .spec-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .spec-desc {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ─── Section Shared Styles ───────────────────────────────────────────── */
+    .apple-section {
+      padding: 100px 28px;
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-amber);
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1.06;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+    }
+
+    .section-lead {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 620px;
+      margin-bottom: 56px;
+    }
+
+    /* ─── The 5 Formal Invariants (Apple Pro Spec Grid) ───────────────────── */
+    .invariants-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .invariants-grid-bottom {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .inv-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 240px;
+      transition: all 0.25s ease;
+    }
+
+    .inv-card:hover {
+      border-color: var(--border-subtle);
+      background: var(--bg-surface-elev);
+      transform: translateY(-2px);
+    }
+
+    .inv-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .inv-index {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-amber);
+      letter-spacing: 0.08em;
+    }
+
+    .inv-pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border-hairline);
+      color: var(--text-secondary);
+    }
+
+    .inv-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+
+    .inv-description {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .inv-code-proof {
+      margin-top: 20px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    /* ─── Apple Comparison Architecture ───────────────────────────────────── */
+    .compare-container {
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      overflow: hidden;
+    }
+
+    .compare-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border-hairline);
+      background: #111115;
+    }
+
+    .compare-col-title {
+      padding: 16px 28px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .compare-col-title.standard {
+      color: var(--text-secondary);
+      border-right: 1px solid var(--border-hairline);
+    }
+
+    .compare-col-title.patchproof {
+      color: var(--accent-amber);
+    }
+
+    .compare-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border-hairline);
+    }
+
+    .compare-row:last-child {
+      border-bottom: none;
+    }
+
+    .compare-cell {
+      padding: 24px 28px;
+    }
+
+    .compare-cell.left {
+      border-right: 1px solid var(--border-hairline);
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .compare-cell.right {
+      background: rgba(224, 122, 30, 0.02);
+    }
+
+    .compare-cell-heading {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .compare-cell-body {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    /* ─── Architecture Pipeline ───────────────────────────────────────────── */
+    .pipeline-stage-cards {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .p-step-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      padding: 22px 18px;
+    }
+
+    .p-step-card.highlight {
+      border-color: rgba(224, 122, 30, 0.35);
+      background: rgba(224, 122, 30, 0.03);
+    }
+
+    .p-step-num {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--accent-amber);
+      margin-bottom: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .p-step-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .p-step-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ─── Full Stack Technical Architecture ───────────────────────────────── */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .stack-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-md);
+      padding: 26px;
+    }
+
+    .stack-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stack-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .stack-desc {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+
+    .stack-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .stack-pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-secondary);
+    }
+
+    /* ─── Apple Final Call to Action ──────────────────────────────────────── */
+    .cta-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 80px 40px;
+      text-align: center;
+      max-width: 1040px;
+      margin: 40px auto 100px;
+    }
+
+    .cta-headline {
+      font-size: clamp(2.2rem, 4vw, 3.4rem);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .cta-sub {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto 36px;
+      line-height: 1.55;
+    }
+
+    /* ─── Legal Modals (TOS & Privacy) ────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #111115;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      max-width: 680px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 36px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--text-secondary);
+      font-size: 16px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .modal-updated {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .modal-body {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .modal-body h4 {
+      color: var(--text-primary);
+      font-size: 14.5px;
+      margin: 18px 0 6px;
+    }
+
+    /* ─── Apple Pro Comprehensive Footer ──────────────────────────────────── */
+    footer {
+      background: #000000;
+      border-top: 1px solid var(--border-hairline);
+      padding: 60px 28px 40px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-container {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .footer-top-columns {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 36px;
+      margin-bottom: 48px;
+    }
+
+    .footer-brand-bio {
+      padding-right: 40px;
+    }
+
+    .footer-brand-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .footer-brand-text {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      font-size: 12.5px;
+    }
+
+    .footer-col-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .footer-link-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .footer-link-list a, .footer-link-list button {
+      color: var(--text-secondary);
+      font-size: 12px;
+      background: none;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+      transition: color 0.15s ease;
+    }
+
+    .footer-link-list a:hover, .footer-link-list button:hover {
+      color: var(--text-primary);
+    }
+
+    .footer-bottom-bar {
+      border-top: 1px solid var(--border-hairline);
+      padding-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-legal-copy {
+      color: var(--text-muted);
+      font-size: 11.5px;
+    }
+
+    .footer-legal-links {
+      display: flex;
+      gap: 18px;
+    }
+
+    .footer-legal-links button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .footer-legal-links button:hover {
+      color: var(--text-secondary);
+    }
+
+    /* ─── Responsive Media Queries ────────────────────────────────────────── */
+    @media (max-width: 992px) {
+      .spec-strip { grid-template-columns: repeat(2, 1fr); }
+      .invariants-grid { grid-template-columns: 1fr; }
+      .invariants-grid-bottom { grid-template-columns: 1fr; }
+      .pipeline-stage-cards { grid-template-columns: 1fr; }
+      .stack-grid { grid-template-columns: 1fr; }
+      .footer-top-columns { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero-headline { font-size: 2.8rem; }
+      .compare-header, .compare-row { grid-template-columns: 1fr; }
+      .compare-cell.left { border-right: none; border-bottom: 1px solid var(--border-hairline); }
+      .footer-top-columns { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Apple Translucent Header ─────────────────────────────────────────── -->
+  <nav id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <span class="nav-brand-dot"></span>
+        Patchproof
+        <span class="nav-brand-tag">v0.1.0</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#demo">Interactive Proof</a></li>
+        <li><a href="#invariants">The 5 Invariants</a></li>
+        <li><a href="#comparison">Compare</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/yourusername/patchproof" class="nav-btn-secondary" target="_blank" rel="noopener">GitHub</a>
+        <a href="/app" class="nav-btn-primary">Dashboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── Hero Section ─────────────────────────────────────────────────────── -->
+  <header id="hero">
+    <div class="hero-eyebrow">
+      <span class="hero-eyebrow-ping"></span>
+      Autonomous Bug Reproduction &amp; Verified Patching
+    </div>
+
+    <h1 class="hero-headline">
+      Fixes that <span class="accent">prove</span> they work.
+    </h1>
+
+    <p class="hero-subhead">
+      Give Patchproof a GitHub issue. It isolates your repository in an air-gapped container, writes a reproduction test that must fail first, synthesizes a fix, and opens a pull request only when all five formal verification invariants pass.
+    </p>
+
+    <div class="hero-cta-group">
+      <a href="/app" class="btn-apple-primary">Open Dashboard</a>
+      <a href="#demo" class="btn-apple-secondary">Inspect Verification Gate</a>
+    </div>
+
+    <!-- ─── Interactive Apple Studio Console ───────────────────────────────── -->
+    <div class="console-stage" id="demo">
+      <div class="console-titlebar">
+        <div class="window-controls">
+          <span class="window-dot close"></span>
+          <span class="window-dot min"></span>
+          <span class="window-dot zoom"></span>
+        </div>
+
+        <div class="console-tabs">
+          <button class="console-tab-btn active" onclick="switchConsoleTab('terminal')">Run Stream</button>
+          <button class="console-tab-btn" onclick="switchConsoleTab('repro')">Repro Test</button>
+          <button class="console-tab-btn" onclick="switchConsoleTab('patch')">Minimal Patch</button>
+          <button class="console-tab-btn" onclick="switchConsoleTab('invariants')">Invariant Proof</button>
+        </div>
+
+        <div class="console-status-pill">
+          <span class="console-status-dot"></span>
+          AIR-GAPPED
+        </div>
+      </div>
+
+      <!-- Bug Scenario Switcher -->
+      <div class="scenario-bar">
+        <div class="scenario-title">
+          <span>Active Target:</span>
+          <strong id="target-label">fastify/rate-limiter #88</strong>
+          <span style="color:var(--text-muted);">&bull;</span>
+          <span id="target-desc" style="color:var(--text-secondary);">Sliding window boundary timestamp drift</span>
+        </div>
+        <div class="scenario-chips">
+          <button class="scenario-chip selected" onclick="loadScenario('fastify')">Issue #88 (Boundary)</button>
+          <button class="scenario-chip" onclick="loadScenario('express')">Issue #142 (Token Race)</button>
+          <button class="scenario-chip" onclick="loadScenario('redis')">Issue #209 (Stream Leak)</button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Terminal Log Stream -->
+      <div id="view-terminal" class="console-view active">
+        <div id="terminal-content">
+          <div class="log-row">
+            <span class="log-ts">17:34:02</span>
+            <span class="log-source sys">system</span>
+            <span class="log-msg">Webhook HMAC-SHA256 signature verified. Job queued as run 5a2111fc.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:34:08</span>
+            <span class="log-source dock">docker</span>
+            <span class="log-msg">Cloning fastify/rate-limiter @ commit 381a90c into ephemeral container.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:34:31</span>
+            <span class="log-source dock">docker</span>
+            <span class="log-msg"><span class="meta">NetworkDisabled: true.</span> Container permanently severed from external network.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:35:04</span>
+            <span class="log-source agent">agent</span>
+            <span class="log-msg">Inspected src/limiter.ts and test/limiter.test.ts. Fault candidate isolated.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:35:22</span>
+            <span class="log-source agent">agent</span>
+            <span class="log-msg">Authored deterministic reproduction test in test/repro_boundary.test.ts.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:35:39</span>
+            <span class="log-source dock">docker</span>
+            <span class="log-msg"><span class="badge-fail">FAIL</span> test/repro_boundary.test.ts: Assertion rejected request at exact boundary timestamp.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:35:50</span>
+            <span class="log-source sys">system</span>
+            <span class="log-msg">Invariant 1 met: Pre-fix failure confirmed. Test file SHA-256 hash locked: 8f3c7e9a...</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:36:18</span>
+            <span class="log-source agent">agent</span>
+            <span class="log-msg">Synthesized candidate patch for src/limiter.ts (1 insertion, 1 deletion).</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:36:34</span>
+            <span class="log-source sys">system</span>
+            <span class="log-msg">Verification Gate: SHA-256 hash matches locked digest. Tamper check passed.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:36:45</span>
+            <span class="log-source dock">docker</span>
+            <span class="log-msg"><span class="badge-pass">PASS</span> test/repro_boundary.test.ts: 1 passed, 0 failed.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:37:12</span>
+            <span class="log-source dock">docker</span>
+            <span class="log-msg"><span class="badge-pass">PASS</span> Full test suite: 48 passed, 0 failed, 0 regressions detected.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:37:29</span>
+            <span class="log-source gate">gate</span>
+            <span class="log-msg">Stash verification: patch stashed, repro test re-run on base tree fails as expected. Fix is causal.</span>
+          </div>
+          <div class="log-row">
+            <span class="log-ts">17:37:41</span>
+            <span class="log-source gate">gate</span>
+            <span class="log-msg"><span class="badge-pass">ALL 5 INVARIANTS SATISFIED</span> Pull request opened: github.com/fastify/rate-limiter/pull/89</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Repro Test File -->
+      <div id="view-repro" class="console-view">
+        <div style="color:var(--text-secondary); margin-bottom: 12px; font-size: 11.5px;">
+          // test/repro_boundary.test.ts &bull; SHA-256: 8f3c7e9a12bc0944fe2a1883... [LOCKED]
+        </div>
+        <table class="diff-table">
+          <tr><td class="ln">1</td><td>import { describe, it, expect } from 'vitest';</td></tr>
+          <tr><td class="ln">2</td><td>import { RateLimiter } from '../src/limiter';</td></tr>
+          <tr><td class="ln">3</td><td></td></tr>
+          <tr><td class="ln">4</td><td>describe('Issue #88 - Sliding Window Boundary', () =&gt; {</td></tr>
+          <tr><td class="ln">5</td><td>  it('must allow incoming request on exact boundary tick', () =&gt; {</td></tr>
+          <tr><td class="ln">6</td><td>    const limiter = new RateLimiter({ windowMs: 1000, max: 5 });</td></tr>
+          <tr><td class="ln">7</td><td>    const now = 1700000000000;</td></tr>
+          <tr><td class="ln">8</td><td>    limiter.record(now);</td></tr>
+          <tr><td class="ln">9</td><td></td></tr>
+          <tr><td class="ln">10</td><td class="diff-del">// FAILS on base: boundary treated as expired prematurely</td></tr>
+          <tr><td class="ln">11</td><td>    const allowed = limiter.isAllowed(now + 1000);</td></tr>
+          <tr><td class="ln">12</td><td>    expect(allowed).toBe(true);</td></tr>
+          <tr><td class="ln">13</td><td>  });</td></tr>
+          <tr><td class="ln">14</td><td>});</td></tr>
+        </table>
+      </div>
+
+      <!-- Tab 3: Minimal Patch Unified Diff -->
+      <div id="view-patch" class="console-view">
+        <div style="color:var(--text-secondary); margin-bottom: 12px; font-size: 11.5px;">
+          // patch: src/limiter.ts &bull; 1 file changed, 1 insertion(+), 1 deletion(-)
+        </div>
+        <table class="diff-table">
+          <tr><td class="ln">42</td><td>  public isAllowed(timestamp: number): boolean {</td></tr>
+          <tr><td class="ln">43</td><td>    const windowStart = timestamp - this.windowMs;</td></tr>
+          <tr><td class="ln">44</td><td>    this.pruneOld(windowStart);</td></tr>
+          <tr><td class="ln">45</td><td>    const elapsed = timestamp - this.firstRequestTime;</td></tr>
+          <tr><td class="ln">46</td><td class="diff-del">-   if (elapsed &lt;= this.windowMs) {</td></tr>
+          <tr><td class="ln">47</td><td class="diff-add">+   if (elapsed &lt; this.windowMs) {</td></tr>
+          <tr><td class="ln">48</td><td>      return this.hits &lt; this.max;</td></tr>
+          <tr><td class="ln">49</td><td>    }</td></tr>
+          <tr><td class="ln">50</td><td>    return true;</td></tr>
+          <tr><td class="ln">51</td><td>  }</td></tr>
+        </table>
+      </div>
+
+      <!-- Tab 4: Invariants Proof -->
+      <div id="view-invariants" class="console-view">
+        <div class="invariants-checklist">
+          <div class="inv-check-item">
+            <div class="inv-check-left">
+              <span class="inv-badge-status pass">PASS</span>
+              <div>
+                <div class="inv-info-title">Invariant 1: Deterministic Pre-Fix Failure</div>
+                <div class="inv-info-desc">Repro test failed with AssertionError against unpatched codebase. Not a syntax error.</div>
+              </div>
+            </div>
+            <div class="inv-proof-hash">exit: 1 (AssertionError)</div>
+          </div>
+
+          <div class="inv-check-item">
+            <div class="inv-check-left">
+              <span class="inv-badge-status pass">PASS</span>
+              <div>
+                <div class="inv-info-title">Invariant 2: Test File Cryptographic Hash Lock</div>
+                <div class="inv-info-desc">Digest before patching matches digest during verification. Zero agent tampering.</div>
+              </div>
+            </div>
+            <div class="inv-proof-hash">SHA-256: 8f3c7e9a... [MATCH]</div>
+          </div>
+
+          <div class="inv-check-item">
+            <div class="inv-check-left">
+              <span class="inv-badge-status pass">PASS</span>
+              <div>
+                <div class="inv-info-title">Invariant 3: Clean Post-Fix Execution</div>
+                <div class="inv-info-desc">Reproduction test passes cleanly once the candidate patch is applied.</div>
+              </div>
+            </div>
+            <div class="inv-proof-hash">1 passed, 0 failed</div>
+          </div>
+
+          <div class="inv-check-item">
+            <div class="inv-check-left">
+              <span class="inv-badge-status pass">PASS</span>
+              <div>
+                <div class="inv-info-title">Invariant 4: Zero Full-Suite Regressions</div>
+                <div class="inv-info-desc">Entire pre-existing test suite re-executed inside sandbox. No existing tests broken.</div>
+              </div>
+            </div>
+            <div class="inv-proof-hash">48/48 passed, 0 regressed</div>
+          </div>
+
+          <div class="inv-check-item">
+            <div class="inv-check-left">
+              <span class="inv-badge-status pass">PASS</span>
+              <div>
+                <div class="inv-info-title">Invariant 5: Causal Stash Verification</div>
+                <div class="inv-info-desc">Patch stashed; repro test re-tested on base tree fails again. Fix causality established.</div>
+              </div>
+            </div>
+            <div class="inv-proof-hash">git.stash() confirmed fail</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Telemetry Bottom Bar -->
+      <div class="console-footer-bar">
+        <div class="telemetry-group">
+          <span>Sandbox: <strong>Docker node:20-alpine</strong></span>
+          <span>RAM: <strong>142 MB / 512 MB ceiling</strong></span>
+          <span>Swap: <strong>Disabled</strong></span>
+        </div>
+        <div class="telemetry-group">
+          <span>Integrity: <strong>HMAC-SHA256 verified</strong></span>
+          <span>PR Status: <strong>Ready to Merge</strong></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Apple Metric Spec Strip ─────────────────────────────────────────── -->
+  <section class="spec-strip">
+    <div class="spec-card">
+      <div class="spec-number">5</div>
+      <div class="spec-label">Formal Invariants</div>
+      <div class="spec-desc">Every pull request must pass all five mathematical verification gates before submission.</div>
+    </div>
+    <div class="spec-card">
+      <div class="spec-number">0</div>
+      <div class="spec-label">Regressions Permitted</div>
+      <div class="spec-desc">A patch that passes a new test but breaks one existing feature is automatically aborted.</div>
+    </div>
+    <div class="spec-card">
+      <div class="spec-number">512<sup>MB</sup></div>
+      <div class="spec-label">Air-Gapped Sandbox</div>
+      <div class="spec-desc">Network severed after dependency setup. Hard memory limits prevent infinite recursion.</div>
+    </div>
+    <div class="spec-card">
+      <div class="spec-number">100<sup>%</sup></div>
+      <div class="spec-label">Deterministic Proof</div>
+      <div class="spec-desc">Cryptographic test file hashing ensures agents cannot weaken assertions to fake success.</div>
+    </div>
+  </section>
+
+  <!-- ─── The 5 Formal Invariants Section ─────────────────────────────────── -->
+  <section class="apple-section" id="invariants">
+    <div class="section-eyebrow">The Engineering Guarantee</div>
+    <h2 class="section-title">Enforced in code.<br/>Not in documentation.</h2>
+    <p class="section-lead">
+      Generic coding agents generate plausible-looking pull requests that fail silently in production. Patchproof enforces five uncompromising invariants directly in the pipeline gate.
+    </p>
+
+    <div class="invariants-grid">
+      <div class="inv-card">
+        <div>
+          <div class="inv-card-header">
+            <span class="inv-index">INVARIANT 01</span>
+            <span class="inv-pill">Pre-Fix Gate</span>
+          </div>
+          <h3 class="inv-title">Deterministic Failure First</h3>
+          <p class="inv-description">
+            The reproduction test must fail against the unpatched codebase with a clean assertion failure. Syntax errors, missing imports, or runtime crashes abort the run immediately.
+          </p>
+        </div>
+        <div class="inv-code-proof">AssertionError: expected false to be true</div>
+      </div>
+
+      <div class="inv-card">
+        <div>
+          <div class="inv-card-header">
+            <span class="inv-index">INVARIANT 02</span>
+            <span class="inv-pill">Cryptographic Security</span>
+          </div>
+          <h3 class="inv-title">SHA-256 Digest Lock</h3>
+          <p class="inv-description">
+            The reproduction test file hash is locked prior to patch synthesis. If an agent attempts to delete assertions, comment out tests, or weaken constraints, the run terminates.
+          </p>
+        </div>
+        <div class="inv-code-proof">sha256(testFile) === preExecutionDigest</div>
+      </div>
+
+      <div class="inv-card">
+        <div>
+          <div class="inv-card-header">
+            <span class="inv-index">INVARIANT 03</span>
+            <span class="inv-pill">Post-Fix Gate</span>
+          </div>
+          <h3 class="inv-title">Clean Reproduction Pass</h3>
+          <p class="inv-description">
+            Once the minimal patch is applied, the reproduction test is executed again in the air-gapped sandbox. It must complete with zero failures and at least one executed assertion.
+          </p>
+        </div>
+        <div class="inv-code-proof">Tests: 1 passed, 1 total (100% pass)</div>
+      </div>
+    </div>
+
+    <div class="invariants-grid-bottom">
+      <div class="inv-card">
+        <div>
+          <div class="inv-card-header">
+            <span class="inv-index">INVARIANT 04</span>
+            <span class="inv-pill">Regression Guard</span>
+          </div>
+          <h3 class="inv-title">Full Suite Zero-Regression</h3>
+          <p class="inv-description">
+            Every pre-existing test in the target repository is executed against the patched tree. A single regression in any existing test file immediately blocks the pull request.
+          </p>
+        </div>
+        <div class="inv-code-proof">fullSuite.failed === 0 &amp;&amp; regressions.length === 0</div>
+      </div>
+
+      <div class="inv-card">
+        <div>
+          <div class="inv-card-header">
+            <span class="inv-index">INVARIANT 05</span>
+            <span class="inv-pill">Causality Gate</span>
+          </div>
+          <h3 class="inv-title">Causal Stash Differential</h3>
+          <p class="inv-description">
+            The verification gate stashes the patch and executes the reproduction test against the bare base tree once more. It must fail again, proving the patch is the sole cause of the fix.
+          </p>
+        </div>
+        <div class="inv-code-proof">git.stash() -&gt; runRepro() must fail</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Side-by-Side Comparison ─────────────────────────────────────────── -->
+  <section class="apple-section" id="comparison">
+    <div class="section-eyebrow">The Contrast</div>
+    <h2 class="section-title">Why unverified patches waste maintainer time.</h2>
+    <p class="section-lead">
+      Reviewing AI generated code without verified tests shifts debugging effort back onto senior maintainers. Patchproof provides mathematical proof alongside every diff.
+    </p>
+
+    <div class="compare-container">
+      <div class="compare-header">
+        <div class="compare-col-title standard">Traditional AI Coding Tools</div>
+        <div class="compare-col-title patchproof">Patchproof Verification Engine</div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-cell left">
+          <div class="compare-cell-heading">Tests written after patch synthesis</div>
+          <div class="compare-cell-body">Writing the test after modifying the code confirms only that the agent can write self-satisfying assertions. No proof the bug ever existed.</div>
+        </div>
+        <div class="compare-cell right">
+          <div class="compare-cell-heading">Reproduction written and failed first</div>
+          <div class="compare-cell-body">The test is authored, verified to fail on master with a verified assertion error, and locked with SHA-256 before any patch is generated.</div>
+        </div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-cell left">
+          <div class="compare-cell-heading">Unmonitored test assertion tampering</div>
+          <div class="compare-cell-body">Agents routinely alter assertions or relax tolerances to force failing tests to turn green without fixing underlying logic.</div>
+        </div>
+        <div class="compare-cell right">
+          <div class="compare-cell-heading">Cryptographic test file integrity</div>
+          <div class="compare-cell-body">The test file hash cannot change by even a single byte during patch synthesis. Any alteration triggers an instant tamper abort.</div>
+        </div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-cell left">
+          <div class="compare-cell-heading">No full regression verification</div>
+          <div class="compare-cell-body">Fixes that pass one new test case but break three adjacent features get pushed directly to branches.</div>
+        </div>
+        <div class="compare-cell right">
+          <div class="compare-cell-heading">Air-gapped full suite confirmation</div>
+          <div class="compare-cell-body">The complete test suite runs inside isolated Docker containers with zero external network connectivity. Zero regressions tolerated.</div>
+        </div>
+      </div>
+
+      <div class="compare-row">
+        <div class="compare-cell left">
+          <div class="compare-cell-heading">Guesses presented as solutions</div>
+          <div class="compare-cell-body">Maintainers spend hours debugging hallucinated patches that sound confident in PR descriptions but fail runtime edge cases.</div>
+        </div>
+        <div class="compare-cell right">
+          <div class="compare-cell-heading">Five formal invariants with run telemetry</div>
+          <div class="compare-cell-body">Every PR includes the full execution report, pre-fix failure logs, post-fix passing logs, and causal differential hashes.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Industrial Architecture Pipeline ────────────────────────────────── -->
+  <section class="apple-section" id="architecture">
+    <div class="section-eyebrow">System Architecture</div>
+    <h2 class="section-title">Deterministic queue-worker design.</h2>
+    <p class="section-lead">
+      Built for production reliability. Every component runs in isolated boundaries with automatic retry management, persistent telemetry, and secret scrubbing.
+    </p>
+
+    <div class="pipeline-stage-cards">
+      <div class="p-step-card">
+        <div class="p-step-num">STAGE 01</div>
+        <div class="p-step-name">Intake &amp; Webhook</div>
+        <div class="p-step-desc">HMAC SHA-256 signature verification on incoming GitHub webhooks. Atomically written to PostgreSQL and enqueued in BullMQ.</div>
+      </div>
+
+      <div class="p-step-card">
+        <div class="p-step-num">STAGE 02</div>
+        <div class="p-step-name">Two-Stage Sandbox</div>
+        <div class="p-step-desc">Clones repo and installs dependencies with outbound network. Severes network permanently before agent execution begins.</div>
+      </div>
+
+      <div class="p-step-card">
+        <div class="p-step-num">STAGE 03</div>
+        <div class="p-step-name">Repro Authoring</div>
+        <div class="p-step-desc">LLM analyzes issue description, inspects source via structured tools, and authors a reproducing test. Verified to fail.</div>
+      </div>
+
+      <div class="p-step-card highlight">
+        <div class="p-step-num">STAGE 04</div>
+        <div class="p-step-name">Verification Gate</div>
+        <div class="p-step-desc">Enforces all five invariants. Validates SHA-256 lock, runs full regression suite, and proves causality via stash differential.</div>
+      </div>
+
+      <div class="p-step-card">
+        <div class="p-step-num">STAGE 05</div>
+        <div class="p-step-name">Pull Request</div>
+        <div class="p-step-desc">Creates atomic Git branch, commits surgical patch, and opens PR via Octokit with complete reproducible run report.</div>
+      </div>
+    </div>
+
+    <!-- Tech Stack Components -->
+    <div class="stack-grid">
+      <div class="stack-card">
+        <div class="stack-tag">Persistence Engine</div>
+        <div class="stack-title">PostgreSQL 16</div>
+        <div class="stack-desc">Atomic state machine for runs, steps, and telemetry logs. Crash-safe and recoverable at any stage of execution.</div>
+        <div class="stack-tags">
+          <span class="stack-pill">runs</span>
+          <span class="stack-pill">steps</span>
+          <span class="stack-pill">logs</span>
+          <span class="stack-pill">pg.Pool</span>
+        </div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-tag">Job Scheduling</div>
+        <div class="stack-title">BullMQ + Redis 7</div>
+        <div class="stack-desc">Reliable distributed task queue with bounded concurrency, retry backoff, and state preservation across server restarts.</div>
+        <div class="stack-tags">
+          <span class="stack-pill">BullMQ</span>
+          <span class="stack-pill">Redis 7</span>
+          <span class="stack-pill">concurrency: 2</span>
+        </div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-tag">Execution Security</div>
+        <div class="stack-title">Dockerode Sandbox</div>
+        <div class="stack-desc">Two-stage container lifecycle with hard 512MB RAM ceiling, swap disabled, and path-traversal write prevention.</div>
+        <div class="stack-tags">
+          <span class="stack-pill">dockerode</span>
+          <span class="stack-pill">node:20-alpine</span>
+          <span class="stack-pill">safePath()</span>
+        </div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-tag">Realtime Telemetry</div>
+        <div class="stack-title">Server-Sent Events (SSE)</div>
+        <div class="stack-desc">Live streaming hub delivering sub-millisecond execution updates. Automatic secret scrubbing on all emitted logs.</div>
+        <div class="stack-tags">
+          <span class="stack-pill">SSE Hub</span>
+          <span class="stack-pill">Secret Scrubbing</span>
+          <span class="stack-pill">EventSource</span>
+        </div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-tag">Agent Orchestrator</div>
+        <div class="stack-title">Structured Tool Loop</div>
+        <div class="stack-desc">Function-calling loop with deterministic tool dispatch: read_file, write_file, search_code, run_tests, apply_patch.</div>
+        <div class="stack-tags">
+          <span class="stack-pill">Tool Calling</span>
+          <span class="stack-pill">5 Attempts Max</span>
+          <span class="stack-pill">32k Context</span>
+        </div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-tag">SCM Integration</div>
+        <div class="stack-title">Octokit REST &amp; Webhooks</div>
+        <div class="stack-desc">GitHub App integration supporting HMAC-SHA256 signature verification, branch creation, and structured PR reports.</div>
+        <div class="stack-tags">
+          <span class="stack-pill">Octokit</span>
+          <span class="stack-pill">HMAC SHA-256</span>
+          <span class="stack-pill">GitHub REST</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Final CTA Banner ────────────────────────────────────────────────── -->
+  <section class="apple-section">
+    <div class="cta-banner">
+      <h2 class="cta-headline">Stop reviewing unverified code.</h2>
+      <p class="cta-sub">
+        Connect your repository or launch an issue verification run from the dashboard. Verified patches backed by deterministic tests.
+      </p>
+      <div class="hero-cta-group" style="margin-bottom:0;">
+        <a href="/app" class="btn-apple-primary">Launch Dashboard</a>
+        <a href="https://github.com/yourusername/patchproof" class="btn-apple-secondary" target="_blank" rel="noopener">Explore Codebase</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Apple Comprehensive Footer ──────────────────────────────────────── -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-top-columns">
+        <div class="footer-brand-bio">
+          <div class="footer-brand-title">
+            <span class="nav-brand-dot"></span>
+            Patchproof
+          </div>
+          <p class="footer-brand-text">
+            Autonomous bug reproduction and formal verification for modern engineering teams. Every pull request backed by a pre-fix failure and zero regressions.
+          </p>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Navigation</div>
+          <ul class="footer-link-list">
+            <li><a href="/app">Dashboard</a></li>
+            <li><a href="#demo">Interactive Console</a></li>
+            <li><a href="#invariants">The 5 Invariants</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Resources</div>
+          <ul class="footer-link-list">
+            <li><a href="https://github.com/yourusername/patchproof" target="_blank" rel="noopener">GitHub Repository</a></li>
+            <li><a href="/health">Health &amp; Status</a></li>
+            <li><a href="/api/runs">API Runs Endpoint</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="footer-col-title">Legal &amp; Trust</div>
+          <ul class="footer-link-list">
+            <li><button onclick="openModal('privacy-modal')">Privacy Policy</button></li>
+            <li><button onclick="openModal('terms-modal')">Terms of Service</button></li>
+            <li><button onclick="openModal('security-modal')">Security Specification</button></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom-bar">
+        <div class="footer-legal-copy">
+          &copy; 2026 Patchproof Engine. MIT Licensed. Enforcing verifiable correctness across software repositories.
+        </div>
+        <div class="footer-legal-links">
+          <button onclick="openModal('privacy-modal')">Privacy</button>
+          <button onclick="openModal('terms-modal')">Terms</button>
+          <button onclick="openModal('security-modal')">Sandbox Security</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ─── Legal Modals ────────────────────────────────────────────────────── -->
+  <div id="privacy-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'privacy-modal')">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeModal('privacy-modal')">&times;</button>
+      <h3 class="modal-title">Privacy Policy</h3>
+      <div class="modal-updated">Last Updated: October 2026</div>
+      <div class="modal-body">
+        <h4>1. Code Processing &amp; Isolation</h4>
+        <p>Patchproof clones source code repositories exclusively into ephemeral, air-gapped Docker containers. Once dependency installation completes, network interfaces are permanently detached. Your repository code is never shared, sent to third-party telemetry, or retained beyond the lifecycle of the active run.</p>
+
+        <h4>2. Secret Scrubbing</h4>
+        <p>All tool execution logs and compiler diagnostics pass through automated entropy and pattern-based secret redaction before emission over Server-Sent Events or storage in PostgreSQL. GitHub tokens, API keys, and environment variables are stripped by default.</p>
+
+        <h4>3. Telemetry Retention</h4>
+        <p>Execution metadata, step timings, and verification hashes are stored locally in your database instance. No data leaves your infrastructure.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="terms-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'terms-modal')">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeModal('terms-modal')">&times;</button>
+      <h3 class="modal-title">Terms of Service</h3>
+      <div class="modal-updated">Last Updated: October 2026</div>
+      <div class="modal-body">
+        <h4>1. Autonomous Execution Safeguards</h4>
+        <p>Patchproof is an automated agent designed to reproduce bugs and generate candidate fixes. While all patches are subjected to five strict verification invariants, pull requests are intended for human review and CI validation before merge.</p>
+
+        <h4>2. Resource Allocations</h4>
+        <p>Every sandbox execution is bounded by strict memory (512 MB) and CPU quotas to prevent runaway loops or denial of service on host nodes.</p>
+
+        <h4>3. Open Source License</h4>
+        <p>Patchproof is distributed under the MIT License. Use in commercial or open-source software development is permitted without royalty.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="security-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'security-modal')">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeModal('security-modal')">&times;</button>
+      <h3 class="modal-title">Sandbox Security Specification</h3>
+      <div class="modal-updated">Security Standard: Rev 2.4</div>
+      <div class="modal-body">
+        <h4>1. Air-Gapped Network Policy</h4>
+        <p>Docker containers start with outbound network strictly during <code>git clone</code> and package manager dependency resolution. Prior to LLM tool execution, Docker API <code>NetworkDisabled: true</code> is committed. No egress packets are permitted.</p>
+
+        <h4>2. Path Traversal &amp; Forbidden Paths</h4>
+        <p>The agent tool layer rejects attempts to read or write to <code>.git</code>, <code>.github</code>, <code>.env</code>, or paths containing traversal tokens (<code>../</code>).</p>
+
+        <h4>3. Tamper Resistance</h4>
+        <p>The reproduction test file hash is computed with SHA-256 immediately after pre-fix failure is confirmed. The gate aborts if the digest deviates during verification.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Interactive Console & Modal Logic ───────────────────────────────── -->
+  <script>
+    // Tab switching in interactive console
+    function switchConsoleTab(tabName) {
+      const tabs = ['terminal', 'repro', 'patch', 'invariants'];
+      tabs.forEach(t => {
+        const view = document.getElementById('view-' + t);
+        if (view) view.classList.remove('active');
+      });
+
+      const activeView = document.getElementById('view-' + tabName);
+      if (activeView) activeView.classList.add('active');
+
+      const buttons = document.querySelectorAll('.console-tab-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+
+      const index = tabs.indexOf(tabName);
+      if (buttons[index]) buttons[index].classList.add('active');
+    }
+
+    // Scenarios data
+    const scenarios = {
+      fastify: {
+        label: 'fastify/rate-limiter #88',
+        desc: 'Sliding window boundary timestamp drift',
+        reproCode: `import { describe, it, expect } from 'vitest';
+import { RateLimiter } from '../src/limiter';
+
+describe('Issue #88 - Sliding Window Boundary', () => {
+  it('must allow incoming request on exact boundary tick', () => {
+    const limiter = new RateLimiter({ windowMs: 1000, max: 5 });
+    const now = 1700000000000;
+    limiter.record(now);
+
+    // FAILS on base: boundary treated as expired prematurely
+    const allowed = limiter.isAllowed(now + 1000);
+    expect(allowed).toBe(true);
+  });
+});`,
+        diffDel: '-   if (elapsed <= this.windowMs) {',
+        diffAdd: '+   if (elapsed < this.windowMs) {',
+        pr: '#89',
+        sha: '8f3c7e9a12bc0944fe2a1883'
+      },
+      express: {
+        label: 'express-validator #142',
+        desc: 'Async sanitizer chain uncaught race on empty input',
+        reproCode: `import { describe, it, expect } from 'vitest';
+import { sanitizeAsync } from '../src/sanitizer';
+
+describe('Issue #142 - Empty String Async Sanitizer', () => {
+  it('does not throw unhandled rejection when payload is empty string', async () => {
+    const chain = sanitizeAsync().trim().escape();
+    // FAILS on base: throws TypeError on undefined buffer access
+    const result = await chain.run('');
+    expect(result.valid).toBe(true);
+    expect(result.value).toBe('');
+  });
+});`,
+        diffDel: '-   if (!value.length) throw new Error("Empty input");',
+        diffAdd: '+   if (!value || value.length === 0) return { valid: true, value: "" };',
+        pr: '#143',
+        sha: '4d19bf7280aa31ec0092c710'
+      },
+      redis: {
+        label: 'ioredis/cluster #209',
+        desc: 'Unhandled socket close event during reconnect slot migration',
+        reproCode: `import { describe, it, expect } from 'vitest';
+import { ClusterPool } from '../src/cluster';
+
+describe('Issue #209 - Socket Disconnect on MOVED', () => {
+  it('re-routes to migrated node without emitting unhandled error', async () => {
+    const cluster = new ClusterPool([{ port: 7000 }]);
+    // FAILS on base: emits unhandled socket error during slot resharding
+    const res = await cluster.handleMoved('slot_4096', '127.0.0.1:7001');
+    expect(res.connected).toBe(true);
+  });
+});`,
+        diffDel: '-   this.socket.destroy();',
+        diffAdd: '+   this.socket.removeAllListeners("error"); this.socket.destroy();',
+        pr: '#210',
+        sha: 'c9034aa19277fe802d334e12'
+      }
+    };
+
+    function loadScenario(key) {
+      const data = scenarios[key];
+      if (!data) return;
+
+      document.getElementById('target-label').textContent = data.label;
+      document.getElementById('target-desc').textContent = data.desc;
+
+      const chips = document.querySelectorAll('.scenario-chip');
+      chips.forEach(c => c.classList.remove('selected'));
+      event.target.classList.add('selected');
+
+      // Update code in views
+      const reproTable = document.querySelector('#view-repro .diff-table');
+      if (reproTable) {
+        const lines = data.reproCode.split('\n');
+        reproTable.innerHTML = lines.map((l, i) => `<tr><td class="ln">${i + 1}</td><td>${escapeHtml(l)}</td></tr>`).join('');
+      }
+
+      const diffTable = document.querySelector('#view-patch .diff-table');
+      if (diffTable) {
+        diffTable.innerHTML = `
+          <tr><td class="ln">44</td><td>    // Source file modified to satisfy invariant</td></tr>
+          <tr><td class="ln">45</td><td class="diff-del">${escapeHtml(data.diffDel)}</td></tr>
+          <tr><td class="ln">46</td><td class="diff-add">${escapeHtml(data.diffAdd)}</td></tr>
+          <tr><td class="ln">47</td><td>    return true;</td></tr>
+        `;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Modal helpers
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function closeModalOnBackdrop(e, id) {
+      if (e.target.id === id) closeModal(id);
+    }
+  </script>
+</body>
+</html>

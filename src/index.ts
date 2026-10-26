@@ -28,7 +28,23 @@ async function main() {
     ? path.join(__dirname, 'dashboard')
     : path.join(process.cwd(), 'src', 'dashboard');
 
-  app.use(express.static(dashboardDir));
+  // Serve landing page static files with dist/src fallback
+  const landingDir = fs.existsSync(path.join(__dirname, 'landing'))
+    ? path.join(__dirname, 'landing')
+    : path.join(process.cwd(), 'src', 'landing');
+
+  // ── Landing page ────────────────────────────────────────────────────────────
+  app.get('/', (_req, res) => {
+    res.sendFile(path.join(landingDir, 'index.html'));
+  });
+
+  // ── App dashboard ───────────────────────────────────────────────────────────
+  app.get('/app', (_req, res) => {
+    res.sendFile(path.join(dashboardDir, 'index.html'));
+  });
+
+  // Serve dashboard static assets (CSS, JS, etc.) if any
+  app.use('/app', express.static(dashboardDir));
 
   // ── API routes ─────────────────────────────────────────────────────────────
   app.use('/health', healthRouter);
@@ -45,9 +61,13 @@ async function main() {
     attachSseGlobal(res);
   });
 
-  // ── Fallback: serve dashboard for any unknown GET ──────────────────────────
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(dashboardDir, 'index.html'));
+  // ── Fallback: serve dashboard for any unknown GET under /app ───────────────
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/webhook') && !req.path.startsWith('/health') && req.path !== '/') {
+      res.sendFile(path.join(dashboardDir, 'index.html'));
+      return;
+    }
+    next();
   });
 
   // ── 4. Start listening ─────────────────────────────────────────────────────

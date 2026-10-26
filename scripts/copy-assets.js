@@ -4,6 +4,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const distDb = path.join(root, 'dist', 'db');
 const distDashboard = path.join(root, 'dist', 'dashboard');
+const distLanding = path.join(root, 'dist', 'landing');
 
 fs.mkdirSync(distDb, { recursive: true });
 fs.copyFileSync(
@@ -18,4 +19,11 @@ fs.cpSync(
   { recursive: true }
 );
 
-console.log('[build] Static assets (schema.sql, dashboard) copied to dist/');
+fs.mkdirSync(distLanding, { recursive: true });
+fs.cpSync(
+  path.join(root, 'src', 'landing'),
+  distLanding,
+  { recursive: true }
+);
+
+console.log('[build] Static assets (schema.sql, dashboard, landing) copied to dist/');
