@@ -109,17 +109,30 @@ tests/
 ---
 
 ## Milestones
-
 | # | Status | What it adds |
 |---|---|---|
 | M1 | ✅ Done | Skeleton: Express, Postgres, BullMQ, `/health` |
-| M2 | 🔲 Next | Sandbox runner: clone, install, run tests |
-| M3 | 🔲 | Agent loop end-to-end, hardcoded issue |
-| M4 | 🔲 | Verification gate + unit tests |
-| M5 | 🔲 | GitHub webhook + PR creation |
-| M6 | 🔲 | Live dashboard + SSE timeline |
-| M7 | 🔲 | Failure handling, budgets, retries |
-| M8 | 🔲 | README final: diagrams, honest limitations |
+| M2 | ✅ Done | Sandbox runner: dockerode container, clone, npm install, isolation |
+| M3 | ✅ Done | Agent loop end-to-end: LLM function calling, tools, loop limit |
+| M4 | ✅ Done | Verification gate: fail before, pass after, full regression check |
+| M5 | ✅ Done | GitHub integration: HMAC webhook verification, branch push, PR creation |
+| M6 | ✅ Done | Live dashboard: SSE streaming timeline, color-coded logs, trigger modal |
+| M7 | ✅ Done | Robustness: demo seeds, token budgets, attempt caps, error recovery |
+| M8 | ✅ Done | Tests & Documentation: 35 passing unit tests, design log, limitations |
+
+---
+
+## Test Suite
+
+```bash
+# Run the complete test suite (35 tests)
+npm test
+```
+
+- `tests/verification.test.ts` (7 tests): Core verification gate invariant tests (all 4 failure modes & happy path)
+- `tests/tools.test.ts` (17 tests): Path traversal prevention (`safePath`), runner detection (Vitest, Jest), command builder, output parser
+- `tests/github.test.ts` (7 tests): Repo URL parsing, webhook HMAC-SHA256 signature verification, PR report builder
+- `tests/prompts.test.ts` (4 tests): System prompt rules, Phase 1 (reproduce) and Phase 2 (patch) prompt construction
 
 ---
 
@@ -129,7 +142,7 @@ tests/
 # 1. Copy env file and fill in values
 cp .env.example .env
 
-# 2. Start dependencies
+# 2. Start dependencies (Postgres + Redis)
 docker compose up postgres redis -d
 
 # 3. Start dev server (runs migrations automatically)
@@ -138,24 +151,39 @@ npm run dev
 # 4. Check health
 curl http://localhost:3000/health
 
-# 5. Trigger a run manually
-curl -X POST http://localhost:3000/api/trigger \
-  -H 'Content-Type: application/json' \
-  -d '{"repoUrl":"https://github.com/owner/repo","issueNumber":1,"issueTitle":"Bug","issueBody":"..."}'
+# 5. Access the live dashboard
+open http://localhost:3000
 ```
 
 ---
 
 ## Known Limitations (honest)
 
-- SSE is in-process; horizontal scaling requires Redis pub/sub
-- Only targets JS/TS repos with Jest or Vitest
-- LLM function calling requires a model that supports it (GPT-4o, etc.)
-- Docker socket mount is required; not compatible with rootless Docker without config
-- Test detection assumes `npm test` or `npx vitest` — custom test scripts may not work
+- **Single-node SSE**: SSE emitter is currently in-process EventEmitter; horizontal multi-instance scaling requires Redis pub/sub.
+- **Target stack**: Focused on JavaScript / TypeScript repositories using Jest or Vitest test runners.
+- **LLM capabilities**: Requires a provider / model supporting OpenAI-compatible function calling (e.g. GPT-4o, Claude 3.5 Sonnet via gateway).
+- **Docker socket**: The worker requires Docker daemon access to spin up isolated container sandboxes.
 
 ---
 
-## What Failed and Why
+## What Failed and Why (Design Log)
 
-*(Updated as milestones complete)*
+1. **ESM / CJS package resolution**:
+   - *Problem*: Modern libraries like `@octokit/rest` and `simple-git` export different shapes under ESM vs CJS. `import.meta.url` broke under CommonJS builds.
+   - *Fix*: Configured TypeScript with `"module": "CommonJS"` and `"moduleResolution": "Bundler"`. Used named `simpleGit` import and avoided hacky `createRequire`.
+
+2. **Jest output parsing order**:
+   - *Problem*: Initial regex for parsing test counts assumed `passed` always appeared before `failed` (`Tests: 3 passed, 1 failed`). When Jest reports failures, it actually outputs `Tests: 2 failed, 8 passed, 10 total`.
+   - *Fix*: Refactored `parseTestCounts` to extract the `Tests:` line and parse `(\d+)\s+passed` and `(\d+)\s+failed` independently regardless of token order.
+
+3. **Repository names with dots in GitHub URLs**:
+   - *Problem*: `parseRepoUrl` used `[^/.]+` which prematurely stopped at periods, parsing `vercel/next.js` as `vercel/next`.
+   - *Fix*: Changed regex to `[^/#?]+` and specifically stripped trailing `.git` extensions, allowing dotted repo names like `next.js` and `chart.js`.
+
+4. **Event loop lingering during test execution**:
+   - *Problem*: When running test suites, background PostgreSQL connection pools kept the Node.js event loop active.
+   - *Fix*: Configured `pg.Pool` with `allowExitOnIdle: true` and added test environment defaults in `src/config.ts` so unit tests execute cleanly in <2s without lingering handles.
+
+5. **Demo Seed Git Environment**:
+   - *Problem*: If a user triggers a demo seed directly from disk, `git stash` in the verification gate would fail because the directory wouldn't be a git repo.
+   - *Fix*: Added automatic `git init`, git author configuration, and initial commit when loading demo seeds so the verification gate's before/after stash logic works identically for both local seeds and remote clones.
