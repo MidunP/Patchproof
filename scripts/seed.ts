@@ -1,7 +1,7 @@
 import { query } from '../src/db/client.js';
 
 async function seed() {
-  console.log('Seeding demo run for dashboard visual...');
+  console.log('Seeding initial verification runs for dashboard telemetry...');
 
   // Run 1: Verified and PR opened
   const run1Res = await query<{ id: string }>(

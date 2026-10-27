@@ -1,20 +1,30 @@
 {
-  "name": "repro",
-  "version": "0.1.0",
-  "description": "Automated bug reproduction and patching agent for GitHub issues",
+  "name": "patchproof",
+  "version": "1.0.0",
+  "description": "Autonomous Bug Reproduction & Formal Patch Verification Engine — Engineered with Alan AI",
   "main": "dist/index.js",
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc && node scripts/copy-assets.js",
     "start": "node dist/index.js",
+    "seed": "tsx scripts/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },
-  "keywords": ["agent", "github", "reproduction", "testing"],
-  "author": "",
+  "keywords": [
+    "autonomous-agent",
+    "formal-verification",
+    "bug-reproduction",
+    "differential-testing",
+    "github-automation",
+    "alan-ai",
+    "docker-sandbox"
+  ],
+  "author": "MidunP",
   "license": "MIT"
 }
+
