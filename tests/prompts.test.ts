@@ -31,7 +31,7 @@ describe('buildUserPrompt', () => {
     expect(prompt).toContain('## GitHub Issue');
     expect(prompt).toContain('Issue #101: Off-by-one in pagination offset');
     expect(prompt).toContain('## Your task (Phase 1: Reproduce)');
-    expect(prompt).toContain('Write a test that FAILS because of this bug');
+    expect(prompt).toContain('FAILS because of this bug');
     expect(prompt).toContain('reason "reproduced"');
   });
 
@@ -43,7 +43,7 @@ describe('buildUserPrompt', () => {
 
     expect(prompt).toContain('## GitHub Issue');
     expect(prompt).toContain('## Your task (Phase 2: Patch)');
-    expect(prompt).toContain('reproduction test is already written and failing');
+    expect(prompt).toContain('reproduction test is already written and currently failing');
     expect(prompt).toContain('reason "done"');
   });
 
