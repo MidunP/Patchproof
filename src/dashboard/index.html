@@ -1478,35 +1478,59 @@
       line-height: 1.5;
     }
 
-    .presets-row {
-      display: inline-flex;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.04);
-      padding: 3px;
-      border-radius: var(--radius-pill);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      gap: 3px;
+    .presets-container {
       margin-bottom: 20px;
+    }
+
+    .presets-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 9px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .presets-chips {
+      display: flex;
       flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
     }
 
     .preset-chip {
       font-family: var(--font-sans);
       font-size: 11.5px;
       font-weight: 500;
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      padding: 4px 12px;
+      color: var(--text-msg);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
       border-radius: var(--radius-pill);
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       letter-spacing: -0.01em;
+      white-space: nowrap;
     }
 
     .preset-chip:hover {
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(99, 102, 241, 0.16);
+      border-color: rgba(99, 102, 241, 0.4);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .preset-chip:active {
+      transform: translateY(0);
+      background: rgba(99, 102, 241, 0.25);
     }
 
     .form-group {
@@ -1934,13 +1958,15 @@
         Patchproof will clone the repository, isolate it in an air-gapped Docker container, author a reproduction test, synthesize a fix, and enforce all 5 invariants.
       </p>
 
-      <div class="presets-row">
-        <span style="font-size:11.5px; color:var(--muted); font-family:var(--font-mono);">Presets:</span>
-        <button type="button" class="preset-chip" onclick="applyPreset('nullHandling')">⚡ Seed: Null Handling</button>
-        <button type="button" class="preset-chip" onclick="applyPreset('offByOne')">⚡ Seed: Off-by-one</button>
-        <button type="button" class="preset-chip" onclick="applyPreset('asyncRace')">⚡ Seed: Async Race</button>
-        <button type="button" class="preset-chip" onclick="applyPreset('fastify')">fastify/fastify-rate-limit #88</button>
-        <button type="button" class="preset-chip" onclick="applyPreset('express')">express-validator #142</button>
+      <div class="presets-container">
+        <div class="presets-label">⚡ 1-Click Verification Presets</div>
+        <div class="presets-chips">
+          <button type="button" class="preset-chip" onclick="applyPreset('offByOne')">⚡ Seed: Off-by-one</button>
+          <button type="button" class="preset-chip" onclick="applyPreset('nullHandling')">⚡ Seed: Null Handling</button>
+          <button type="button" class="preset-chip" onclick="applyPreset('asyncRace')">⚡ Seed: Async Race</button>
+          <button type="button" class="preset-chip" onclick="applyPreset('fastify')">fastify/rate-limit #88</button>
+          <button type="button" class="preset-chip" onclick="applyPreset('express')">express-validator #142</button>
+        </div>
       </div>
 
       <div class="form-group">
