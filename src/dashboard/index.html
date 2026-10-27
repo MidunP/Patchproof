@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patchproof: Live Verification Dashboard</title>
   <meta name="description" content="Real-time verification dashboard for Patchproof: autonomous bug reproduction and formal patching for GitHub issues." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     /* ─── Ember Design Tokens (Linear/Vercel standard) ─────────────────────── */
@@ -59,9 +62,9 @@
       --violet:           #a855f7;
       --violet-dim:       rgba(168, 85, 247, 0.12);
 
-      /* Typography */
-      --font-sans:        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
-      --font-mono:        ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      /* Typography - Apple & Premium Studio Standard */
+      --font-sans:        'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      --font-mono:        'JetBrains Mono', "SF Mono", Menlo, Monaco, Consolas, monospace;
 
       /* Radii */
       --radius-sm:        6px;
@@ -78,6 +81,8 @@
       background-attachment: fixed;
       color: var(--text);
       font-family: var(--font-sans);
+      letter-spacing: -0.012em;
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
       overflow: hidden;
     }
 
@@ -222,38 +227,28 @@
       box-shadow: 0 0 8px var(--fail);
     }
 
-    .btn-github-nav {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text);
-      background: var(--surface-2);
+    .btn-github-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border);
-      padding: 5px 12px;
-      border-radius: var(--radius-pill);
-      cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      text-decoration: none;
-    }
-
-    .btn-github-nav:hover {
-      background: var(--surface-3);
-      border-color: var(--border-hi);
-      color: #ffffff;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-    }
-
-    .btn-github-nav svg {
-      flex-shrink: 0;
+      justify-content: center;
       color: var(--muted);
-      transition: color 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      flex-shrink: 0;
     }
 
-    .btn-github-nav:hover svg {
+    .btn-github-icon:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
       color: #ffffff;
+      transform: scale(1.06);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
     }
 
     .btn-new-run {
@@ -951,7 +946,7 @@
       border: 1px solid var(--border);
       border-bottom: none;
       border-radius: var(--radius-md) var(--radius-md) 0 0;
-      padding: 0 16px;
+      padding: 10px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -961,40 +956,43 @@
     }
 
     .tab-buttons {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 3px;
     }
 
     .tab-btn {
-      font-family: var(--font-mono);
-      font-size: 11.5px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 500;
       color: var(--muted);
       background: transparent;
       border: none;
-      padding: 12px 14px;
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
       cursor: pointer;
       position: relative;
-      transition: color 0.15s ease;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: -0.01em;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .tab-btn:hover {
       color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
     }
 
     .tab-btn.active {
-      color: var(--text);
-      font-weight: 600;
-    }
-
-    .tab-btn.active::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--accent);
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.14);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      font-weight: 500;
     }
 
     /* Log Toolbar */
@@ -1056,32 +1054,38 @@
     }
 
     .log-filter-chips {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 2px;
     }
 
     .filter-chip-btn {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
       background: transparent;
-      border: 1px solid var(--border);
+      border: none;
       color: var(--muted);
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: -0.01em;
     }
 
     .filter-chip-btn:hover {
       color: var(--text);
-      border-color: var(--border-hi);
+      background: rgba(255, 255, 255, 0.06);
     }
 
     .filter-chip-btn.selected {
-      background: var(--surface-3);
-      color: var(--text);
-      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.22);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
       font-weight: 500;
     }
 
@@ -1475,29 +1479,34 @@
     }
 
     .presets-row {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 3px;
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
 
     .preset-chip {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 500;
+      background: transparent;
+      border: none;
       color: var(--muted);
-      padding: 4px 10px;
-      border-radius: 4px;
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: -0.01em;
     }
 
     .preset-chip:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-dim);
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
     }
 
     .form-group {
@@ -1690,11 +1699,10 @@
         <div class="health-dot" id="healthDot"></div>
         <span id="healthText">Checking health...</span>
       </div>
-      <a href="https://github.com/MidunP/Patchproof" target="_blank" rel="noopener" class="btn-github-nav" title="View Source on GitHub">
-        <svg class="github-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+      <a href="https://github.com/MidunP/Patchproof" target="_blank" rel="noopener" class="btn-github-icon" aria-label="GitHub Repository" title="View Source on GitHub">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
           <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
         </svg>
-        <span>GitHub</span>
       </a>
       <button class="btn-new-run" id="btnOpenTriggerModal" onclick="openTriggerSheet()">+ New Run</button>
     </div>
