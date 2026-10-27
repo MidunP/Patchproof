@@ -163,7 +163,21 @@
     }
 
     .nav-links a:hover {
-     .btn-github-icon {
+      color: var(--text);
+    }
+
+    .nav-links a[aria-current="page"] {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-github-icon {
       width: 34px;
       height: 34px;
       border-radius: var(--radius-pill);
