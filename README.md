@@ -1,6 +1,8 @@
-# Repro
+# Patchproof
 
-Repro is an autonomous bug reproduction and patch verification engine. Given a GitHub issue (via webhook or API trigger), Repro clones the repository into an isolated Docker sandbox, writes a reproduction test that deterministically fails against the buggy code, synthesizes a candidate patch, and opens a pull request **only** when a formal before/after invariant is satisfied.
+**Autonomous Bug Reproduction & Formal Patch Verification Engine**
+
+Patchproof is an enterprise-grade autonomous bug reproduction and patch verification engine. Given a GitHub issue (via webhook or API trigger), Patchproof clones the repository into an isolated Docker sandbox, writes a reproduction test that deterministically fails against the buggy code, synthesizes a candidate patch, and opens a pull request **only** when a formal before/after invariant is satisfied.
 
 ---
 
