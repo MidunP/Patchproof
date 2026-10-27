@@ -17,41 +17,47 @@
     }
 
     :root {
-      /* Surface & Layout */
-      --bg:               #08080c;
-      --surface:          #101016;
-      --surface-2:        #16161e;
-      --surface-3:        #1f1f2a;
+      /* Surface & Layout - Obsidian & Deep Slate */
+      --bg:               #07090e;
+      --surface:          #0d1118;
+      --surface-2:        #131822;
+      --surface-3:        #1a2232;
       
       /* Hairline Borders */
       --border:           rgba(255, 255, 255, 0.08);
       --border-hi:        rgba(255, 255, 255, 0.16);
-      --border-glow:      rgba(255, 122, 26, 0.25);
+      --border-glow:      rgba(99, 102, 241, 0.35);
 
       /* Typography Hierarchy */
-      --text:             #f4f4f7;
-      --muted:            #9b9ba8;
-      --faint:            #6b6b78;
-      --text-msg:         #d4d4dc;
-      --text-time:        #7a7a88;
+      --text:             #f8fafc;
+      --muted:            #94a3b8;
+      --faint:            #64748b;
+      --text-msg:         #e2e8f0;
+      --text-time:        #64748b;
 
-      /* Ember Precision Palette */
-      --accent:           #ff7a1a;
-      --accent-soft:      #ffb15c;
-      --accent-deep:      #ff5a00;
-      --accent-glow:      rgba(255, 122, 26, 0.20);
-      --accent-dim:       rgba(255, 122, 26, 0.08);
+      /* Forward Deployment Engineering Palette: Electric Indigo & Cyber Blue */
+      --accent:           #6366f1;
+      --accent-soft:      #818cf8;
+      --accent-deep:      #4f46e5;
+      --accent-glow:      rgba(99, 102, 241, 0.22);
+      --accent-dim:       rgba(99, 102, 241, 0.09);
+      
+      /* Cyber Secondary */
+      --cyan:             #06b6d4;
+      --cyan-soft:        #38bdf8;
+      --cyan-glow:        rgba(6, 182, 212, 0.22);
+      --cyan-dim:         rgba(6, 182, 212, 0.08);
 
       /* Semantic Status */
-      --pass:             #34d399;
-      --pass-dim:         rgba(52, 211, 153, 0.12);
-      --pass-glow:        rgba(52, 211, 153, 0.25);
-      --fail:             #f87171;
-      --fail-dim:         rgba(248, 113, 113, 0.12);
-      --info:             #60a5fa;
-      --info-dim:         rgba(96, 165, 250, 0.12);
-      --violet:           #c4b5fd;
-      --violet-dim:       rgba(196, 181, 253, 0.12);
+      --pass:             #10b981;
+      --pass-dim:         rgba(16, 185, 129, 0.12);
+      --pass-glow:        rgba(16, 185, 129, 0.25);
+      --fail:             #f43f5e;
+      --fail-dim:         rgba(244, 63, 94, 0.12);
+      --info:             #38bdf8;
+      --info-dim:         rgba(56, 189, 248, 0.12);
+      --violet:           #a855f7;
+      --violet-dim:       rgba(168, 85, 247, 0.12);
 
       /* Typography */
       --font-sans:        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -64,11 +70,11 @@
       --radius-pill:      9999px;
     }
 
-    /* ─── Global Background & Faint Orange Radial Glow ───────────────────── */
+    /* ─── Global Background & Faint Indigo Radial Glow ───────────────────── */
     html, body {
       height: 100%;
       background-color: var(--bg);
-      background-image: radial-gradient(circle 900px at 50% -20%, rgba(255, 122, 26, 0.07), transparent 70%);
+      background-image: radial-gradient(circle 900px at 50% -20%, rgba(99, 102, 241, 0.08), transparent 70%);
       background-attachment: fixed;
       color: var(--text);
       font-family: var(--font-sans);
@@ -216,25 +222,60 @@
       box-shadow: 0 0 8px var(--fail);
     }
 
+    .btn-github-nav {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      text-decoration: none;
+    }
+
+    .btn-github-nav:hover {
+      background: var(--surface-3);
+      border-color: var(--border-hi);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-github-nav svg {
+      flex-shrink: 0;
+      color: var(--muted);
+      transition: color 0.2s;
+    }
+
+    .btn-github-nav:hover svg {
+      color: #ffffff;
+    }
+
     .btn-new-run {
       font-size: 12.5px;
-      font-weight: 500;
-      color: #08080c;
-      background: #f4f4f7;
-      padding: 6px 14px;
+      font-weight: 600;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+      padding: 6px 15px;
       border-radius: var(--radius-pill);
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.16);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.15s ease;
+      box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .btn-new-run:hover {
-      background: #ffffff;
-      transform: scale(1.02);
-      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+      background: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
     }
 
     /* ─── Two-Column Layout ──────────────────────────────────────────────── */
@@ -277,11 +318,11 @@
     .run-counter-badge {
       font-family: var(--font-mono);
       font-size: 11px;
-      color: var(--accent);
+      color: var(--accent-soft);
       background: var(--accent-dim);
       padding: 2px 7px;
       border-radius: 4px;
-      border: 1px solid rgba(255, 122, 26, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.25);
     }
 
     .sidebar-search-box {
@@ -324,10 +365,12 @@
       background: var(--surface-2);
     }
 
-    /* Active Run: orange left border + faint orange bg */
+    /* Active Run: Electric Indigo left border + faint glow */
     .run-card.active {
       background: var(--accent-dim);
       border-left: 3px solid var(--accent);
+      border-color: rgba(99, 102, 241, 0.35);
+      box-shadow: inset 0 0 16px rgba(99, 102, 241, 0.06);
     }
 
     .run-card-top {
@@ -394,8 +437,8 @@
 
     .status-badge.reproducing, .status-badge.patching, .status-badge.verifying {
       background: var(--accent-dim);
-      color: var(--accent);
-      border: 1px solid rgba(255, 122, 26, 0.3);
+      color: var(--accent-soft);
+      border: 1px solid rgba(99, 102, 241, 0.3);
     }
 
     .status-badge.pr_opened {
@@ -592,9 +635,9 @@
     }
 
     .verdict-card.verifying {
-      border-color: rgba(255, 122, 26, 0.35);
-      background: linear-gradient(135deg, rgba(255, 122, 26, 0.08) 0%, rgba(16, 16, 22, 0.95) 45%, rgba(22, 22, 30, 0.98) 100%);
-      box-shadow: 0 0 25px rgba(255, 122, 26, 0.08), inset 0 1px 0 rgba(255, 122, 26, 0.2);
+      border-color: rgba(99, 102, 241, 0.4);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(13, 17, 24, 0.95) 45%, rgba(19, 24, 34, 0.98) 100%);
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(99, 102, 241, 0.2);
     }
 
     .verdict-card.failed {
@@ -636,10 +679,10 @@
     }
 
     .verdict-card.verifying .verdict-seal {
-      background: rgba(255, 122, 26, 0.15);
+      background: rgba(99, 102, 241, 0.15);
       border-color: var(--accent);
-      color: var(--accent);
-      box-shadow: 0 0 12px rgba(255, 122, 26, 0.3);
+      color: var(--accent-soft);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
     }
 
     .verdict-card.failed .verdict-seal {
@@ -747,7 +790,7 @@
 
     .inv-segment.active {
       background: var(--accent);
-      box-shadow: 0 0 6px rgba(255, 122, 26, 0.5);
+      box-shadow: 0 0 6px rgba(99, 102, 241, 0.6);
     }
 
     .inv-segment.fail {
@@ -822,9 +865,9 @@
     .step-node.active {
       background: var(--accent);
       border-color: var(--accent);
-      color: #08080c;
-      box-shadow: 0 0 0 0 rgba(255, 122, 26, 0.6);
-      animation: orangePulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
+      color: #ffffff;
+      box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6);
+      animation: statusPulse 2s infinite cubic-bezier(0.66, 0, 0, 1);
     }
 
     .step-node.failed {
@@ -833,22 +876,22 @@
       color: #ffffff;
     }
 
-    @keyframes orangePulse {
+    @keyframes statusPulse {
       0% {
-        box-shadow: 0 0 0 0 rgba(255, 122, 26, 0.7);
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
       }
       70% {
-        box-shadow: 0 0 0 8px rgba(255, 122, 26, 0);
+        box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
       }
       100% {
-        box-shadow: 0 0 0 0 rgba(255, 122, 26, 0);
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
       }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .step-node.active {
         animation: none;
-        box-shadow: 0 0 8px rgba(255, 122, 26, 0.6);
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
       }
       .badge-dot.pulse {
         animation: none;
@@ -1647,6 +1690,12 @@
         <div class="health-dot" id="healthDot"></div>
         <span id="healthText">Checking health...</span>
       </div>
+      <a href="https://github.com/MidunP/Patchproof" target="_blank" rel="noopener" class="btn-github-nav" title="View Source on GitHub">
+        <svg class="github-icon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        <span>GitHub</span>
+      </a>
       <button class="btn-new-run" id="btnOpenTriggerModal" onclick="openTriggerSheet()">+ New Run</button>
     </div>
   </header>
@@ -2144,9 +2193,14 @@
 
       // Render Header Chips
       const chipsSlot = document.getElementById('runChipsRow');
+      const isGh = run.repo_url && run.repo_url.includes('github.com');
+      const repoIcon = isGh
+        ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px; margin-right:4px;"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>`
+        : `<span class="chip-icon">📦</span>`;
+
       chipsSlot.innerHTML = `
         <span class="header-chip" title="Repository">
-          <span class="chip-icon">📦</span>
+          ${repoIcon}
           <span>Repo:</span>
           <strong>${repoClean}</strong>
         </span>
@@ -2217,7 +2271,13 @@
         sealBadge.querySelector('.verdict-seal-icon').textContent = '✓';
         summaryText.innerHTML = 'Air-gapped verification complete &middot; <strong>All 5 formal invariants locked</strong>';
         if (run.pr_url) {
-          actionSlot.innerHTML = `<a href="${run.pr_url}" target="_blank" rel="noopener" class="btn-pill-white">View Pull Request ↗</a>`;
+          actionSlot.innerHTML = `
+            <a href="${run.pr_url}" target="_blank" rel="noopener" class="btn-pill-white" style="display:inline-flex; align-items:center; gap:8px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+              </svg>
+              <span>View Pull Request ↗</span>
+            </a>`;
         } else {
           actionSlot.innerHTML = `<span class="btn-pill-white" style="opacity:0.8;">Verified ↗</span>`;
         }

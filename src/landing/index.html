@@ -17,33 +17,33 @@
     }
 
     :root {
-      /* Base Surface Tokens */
-      --bg:               #08080c;
-      --surface:          #101016;
-      --surface-2:        #16161e;
+      /* Base Surface Tokens - Obsidian Slate */
+      --bg:               #07090e;
+      --surface:          #0d1118;
+      --surface-2:        #131822;
 
       /* Borders */
       --border:           rgba(255, 255, 255, 0.08);
       --border-hi:        rgba(255, 255, 255, 0.16);
 
       /* Typography Colors */
-      --text:             #f4f4f7;
-      --muted:            #9b9ba8;
-      --faint:            #6b6b78;
+      --text:             #f8fafc;
+      --muted:            #94a3b8;
+      --faint:            #64748b;
 
-      /* Brand Accent Tokens */
-      --accent:           #ff7a1a;
-      --accent-soft:      #ffb15c;
-      --accent-deep:      #ff5a00;
-      --accent-glow:      rgba(255, 122, 26, 0.20);
+      /* Forward Deployment Accent Tokens: Electric Indigo */
+      --accent:           #6366f1;
+      --accent-soft:      #818cf8;
+      --accent-deep:      #4f46e5;
+      --accent-glow:      rgba(99, 102, 241, 0.22);
 
       /* Semantic Status */
-      --pass:             #34d399;
-      --pass-bg:          rgba(52, 211, 153, 0.12);
-      --pass-border:      rgba(52, 211, 153, 0.30);
-      --fail:             #f87171;
-      --fail-bg:          rgba(248, 113, 113, 0.12);
-      --info:             #60a5fa;
+      --pass:             #10b981;
+      --pass-bg:          rgba(16, 185, 129, 0.12);
+      --pass-border:      rgba(16, 185, 129, 0.30);
+      --fail:             #f43f5e;
+      --fail-bg:          rgba(244, 63, 94, 0.12);
+      --info:             #38bdf8;
 
       /* Fonts */
       --font-sans:        -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -56,9 +56,9 @@
       --radius-pill:      980px;
 
       /* Shadows */
-      --shadow-terminal:  0 40px 120px -20px rgba(255, 122, 26, 0.15);
-      --shadow-btn-glow:  0 0 24px rgba(255, 122, 26, 0.28);
-      --shadow-btn-hover: 0 0 32px rgba(255, 122, 26, 0.42);
+      --shadow-terminal:  0 40px 120px -20px rgba(99, 102, 241, 0.16);
+      --shadow-btn-glow:  0 0 24px rgba(99, 102, 241, 0.28);
+      --shadow-btn-hover: 0 0 32px rgba(99, 102, 241, 0.42);
     }
 
     html {
@@ -1385,7 +1385,12 @@
       </ul>
 
       <div class="nav-actions">
-        <a href="https://github.com/yourusername/patchproof" class="nav-btn-secondary" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/MidunP/Patchproof" class="nav-btn-secondary" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:7px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
         <a href="/app" class="nav-btn-primary">Dashboard</a>
       </div>
     </div>
@@ -1873,7 +1878,12 @@
         <a href="/app" class="btn-apple-primary">
           Launch Dashboard <span class="arrow">&rarr;</span>
         </a>
-        <a href="https://github.com/yourusername/patchproof" class="btn-apple-secondary" target="_blank" rel="noopener">Explore Codebase</a>
+        <a href="https://github.com/MidunP/Patchproof" class="btn-apple-secondary" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:8px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span>Explore Codebase</span>
+        </a>
       </div>
     </div>
   </section>
@@ -1905,7 +1915,7 @@
         <div>
           <div class="footer-col-title">Resources</div>
           <ul class="footer-link-list">
-            <li><a href="https://github.com/yourusername/patchproof" target="_blank" rel="noopener">GitHub Repository</a></li>
+            <li><a href="https://github.com/MidunP/Patchproof" target="_blank" rel="noopener">GitHub Repository</a></li>
             <li><a href="/health">Health &amp; Status</a></li>
             <li><a href="/api/runs">API Runs Endpoint</a></li>
           </ul>
