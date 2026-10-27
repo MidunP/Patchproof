@@ -197,7 +197,7 @@ queued ──► cloning ──► reproducing ──► patching ──► veri
 
 ## 7. Test Suite
 
-The test suite consists of **68 automated tests** covering security boundaries, verification gate failure modes, route handling, agent loops, and demo seed integrity.
+The test suite consists of **69 automated tests** covering security boundaries, verification gate failure modes, route handling, agent loops, and demo seed integrity.
 
 ```bash
 npm test
@@ -213,11 +213,11 @@ npm test
  ✓ tests/agent.test.ts         (4 tests)
  ✓ tests/routes.test.ts        (4 tests)
  ✓ tests/sandbox.test.ts       (7 tests)
- ✓ tests/github.test.ts        (7 tests)
+ ✓ tests/github.test.ts        (8 tests)
 
  Test Files  8 passed (8)
-      Tests  68 passed (68)
-   Duration  3.11s
+      Tests  69 passed (69)
+   Duration  3.52s
 ```
 
 ### Static Type Checking
